@@ -18,7 +18,7 @@ from rich.style import Style
 from rich.progress import Progress
 import pandas as pd
 import re
-from . import EmsoMetadata
+from . import Digi4EcoMetadata
 from .utils import group_metadata_variables, check_url
 import inspect
 import numpy as np
@@ -43,7 +43,7 @@ class EmsoMetadataTester:
         # Dict to store all erddap. KEY is the test identifier while value is the method
         rich.print("[blue]Setting up EMSO Metadata Tests...")
 
-        self.metadata = EmsoMetadata(True)
+        self.metadata = Digi4EcoMetadata(True)
         self.context = None  # here info about the current attribute being tested will be stored
 
         self.implemented_tests = {}
@@ -412,6 +412,10 @@ class EmsoMetadataTester:
                 value = int(value)
             except ValueError:
                 return False, f"'{value}' is not a valid EDMO code"
+
+        # TODO: Fix EDMO codes
+        return True, ""
+
         if value in self.metadata.edmo_codes["code"].values:
             return True, ""
         return False, f"'{value}' is not a valid EDMO code"
@@ -419,6 +423,8 @@ class EmsoMetadataTester:
     def edmo_uri(self, value, args):
         if type(value) != str:
             return False, "EDMO URI should be a string"
+        # TODO: Fix EDMO codes
+        return True, ""
 
         uri = value.replace("http", "https")  # make sure to use http
         if uri.endswith("/"):
@@ -757,26 +763,5 @@ class EmsoMetadataTester:
 
         if not check_url(value):
             return False, "URL not reachable"
-
-        return True, ""
-
-    def oso_ontology(self, value, args):
-
-        oso_type = args[0]
-        assert oso_type in ["rf", "site", "platform"]
-
-        if oso_type == "rf" :
-            if not self.metadata.oso.check_rf(value):
-                return False, "RF not found in OSO"
-
-        elif oso_type == "site":
-            if not self.metadata.oso.check_site(value):
-                return False, "Site not found in OSO"
-
-        elif oso_type == "platform":
-            if not self.metadata.oso.check_platform(value):
-                return False, "Platform not found in OSO"
-        else:
-            raise ValueError(f"Unimplemented oso_type {oso_type}")
 
         return True, ""

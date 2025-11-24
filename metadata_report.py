@@ -10,7 +10,7 @@ license: MIT
 created: 23/2/23
 """
 from argparse import ArgumentParser
-from src.emso_metadata_harmonizer import metadata_report
+from src.digi4eco_metadata_harmonizer import metadata_report
 
 if __name__ == "__main__":
     argparser = ArgumentParser()

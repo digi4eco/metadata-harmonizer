@@ -18,13 +18,10 @@ import netCDF4 as nc
 import xarray as xr
 import rich
 import warnings
-
-from sympy.parsing.maxima import var_name
-
-from src.emso_metadata_harmonizer.metadata import EmsoMetadata
-from src.emso_metadata_harmonizer.metadata.constants import iso_time_format
-from src.emso_metadata_harmonizer.metadata.metadata_templates import dimension_metadata, quality_control_metadata
-from src.emso_metadata_harmonizer.metadata.utils import LoggerSuperclass, CYN
+from src.digi4eco_metadata_harmonizer.metadata import Digi4EcoMetadata
+from src.digi4eco_metadata_harmonizer.metadata.constants import iso_time_format
+from src.digi4eco_metadata_harmonizer.metadata.metadata_templates import dimension_metadata, quality_control_metadata
+from src.digi4eco_metadata_harmonizer.metadata.utils import LoggerSuperclass, CYN
 
 emso = None
 
@@ -47,7 +44,7 @@ class WaterFrame(LoggerSuperclass):
         LoggerSuperclass.__init__(self, logger, "WF", colour=CYN)
         global emso
         if not emso:
-            emso = EmsoMetadata()
+            emso = Digi4EcoMetadata()
         self.emso = emso
 
         # Metadata should have at least 4 keys: global, sensor, platform and variables

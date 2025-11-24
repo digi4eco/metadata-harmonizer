@@ -15,7 +15,7 @@ import rich
 import time
 from .erddap import ERDDAP
 import pandas as pd
-from .metadata import EmsoMetadata
+from .metadata import Digi4EcoMetadata
 from .metadata.utils import threadify
 from .metadata.dataset import get_netcdf_metadata
 from .metadata.tests import EmsoMetadataTester
@@ -47,7 +47,7 @@ def metadata_report(target,
     """
     if clear:
         rich.print("Clearing downloaded files...", end="")
-        EmsoMetadata.clear_downloads()
+        Digi4EcoMetadata.clear_downloads()
         rich.print("[green]done")
         exit()
 

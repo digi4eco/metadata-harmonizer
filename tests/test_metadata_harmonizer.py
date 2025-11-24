@@ -22,9 +22,9 @@ import logging
 from cfchecker.cfchecks import CFChecker
 
 try:
-    from src.emso_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame
-    from src.emso_metadata_harmonizer.metadata.dataset import load_data
-    from src.emso_metadata_harmonizer.metadata.utils import setup_log
+    from src.digi4eco_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame
+    from src.digi4eco_metadata_harmonizer.metadata.dataset import load_data
+    from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log
 
 except ModuleNotFoundError:
     # Get the directory of the current script
@@ -33,10 +33,10 @@ except ModuleNotFoundError:
     parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
     # Add the parent directory to the sys.path
     sys.path.insert(0, parent_dir)
-    from src.emso_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame, setup_log
-    from src.emso_metadata_harmonizer.metadata.dataset import load_data
-    from src.emso_metadata_harmonizer.metadata.emso import EmsoMetadata
-    from src.emso_metadata_harmonizer.metadata import setup_log
+    from src.digi4eco_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame, setup_log
+    from src.digi4eco_metadata_harmonizer.metadata.dataset import load_data
+    from src.digi4eco_metadata_harmonizer.metadata.digi4eco import Digi4EcoMetadata
+    from src.digi4eco_metadata_harmonizer.metadata import setup_log
 
 
 def run_subprocess(cmd):

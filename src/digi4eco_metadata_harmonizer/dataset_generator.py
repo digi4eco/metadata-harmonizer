@@ -16,7 +16,6 @@ import pandas as pd
 import yaml
 
 from .metadata.dataset import load_data
-from .metadata import EmsoMetadata
 from .metadata.utils import assert_type, LoggerSuperclass
 from .metadata.waterframe import WaterFrame, merge_waterframes
 

@@ -11,8 +11,8 @@ created: 15/5/23
 """
 import logging
 from argparse import ArgumentParser
-from src.emso_metadata_harmonizer import erddap_config
-from src.emso_metadata_harmonizer.metadata.utils import setup_log
+from src.digi4eco_metadata_harmonizer import erddap_config
+from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log
 
 if __name__ == "__main__":
     argparser = ArgumentParser()

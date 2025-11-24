@@ -1,4 +1,7 @@
 .emso
+.digi4eco
+*.nc
+log
 *.json
 **/__pycache__/**
 .idea
