@@ -16,8 +16,11 @@ import pandas as pd
 import json
 import time
 from .utils import download_files, get_file_list
+from rdflib import Graph, Literal, Namespace
+from rdflib.plugins.sparql import prepareQuery
+from rdflib.namespace import SKOS, RDF, OWL
 
-emso_version = "develop"
+emso_version = "feature/v1.0"
 
 # List of URLs
 emso_metadata_url = f"https://raw.githubusercontent.com/emso-eric/emso-metadata-specifications/{emso_version}/EMSO_metadata.md"
@@ -42,6 +45,11 @@ spdx_licenses_github = "https://raw.githubusercontent.com/spdx/license-list-data
 # Copernicus INS TAC Parameter list v3.2
 copernicus_param_list = "https://archimer.ifremer.fr/doc/00422/53381/108480.xlsx"
 
+cf_standard_name_units_url = "https://cfconventions.org/Data/cf-standard-names/90/src/cf-standard-name-table.xml"
+
+dwc_terms_url = "https://raw.githubusercontent.com/tdwg/dwc/refs/heads/master/vocabulary/term_versions.csv"
+
+oso_ontology_url = "https://raw.githubusercontent.com/emso-eric/oso-ontology/refs/heads/main/docs/ontology.ttl"
 
 def process_markdown_file(file) -> (dict, dict):
     """
@@ -85,6 +93,7 @@ def process_markdown_file(file) -> (dict, dict):
             if not line.endswith("|"):
                 line += "|"  # fix tables not properly formatted
             fields = [f.strip() for f in line.split("|")[1:-1]]
+            fields = [f.split("<")[0] for f in fields]  # remove annotations like <sup>1</sup>
             for i in range(len(fields)):
                 if fields[i] in ["false", "False"]:
                     table[headers[i]].append(False)
@@ -162,13 +171,15 @@ def parse_sdn_jsonld(filename):
         "uri": [],
         "identifier": [],
         "prefLabel": [],
-        "definition": []
+        "definition": [],
+        "altLabel": []
     }
 
     alias = {  # key-> key to be stored in data dict, value -> all possible keys found in JSON-LD docs
         "definition": ["definition", "skos:definition"],
-        "prefLabel": ["definition", "skos:prefLabel"],
+        "prefLabel": ["prefLabel", "skos:prefLabel"],
         "identifier": ["dc:identifier", "dce:identifier"],
+        "altLabel": ["altLabel", "skos:altLabel"],
         "uri": ["@id"]
     }
 
@@ -189,7 +200,6 @@ def parse_sdn_jsonld(filename):
         uri = element["@id"]
         if element["@type"] != "skos:Concept":
             continue
-
         for key in data.keys():
             value = get_value_by_alias(element, key)
             if type(value) == type(None):
@@ -197,6 +207,9 @@ def parse_sdn_jsonld(filename):
                 continue
             if type(value) is dict:
                 value = value["@value"]
+            elif type(value) is list:
+                value = value[0]
+
             data[key].append(value)
 
         # Initialize as empty list
@@ -244,6 +257,54 @@ def parse_sdn_jsonld(filename):
 
     return data, narrower, broader, related
 
+class OSO:
+    def __init__(self, ttl_file):
+        self.graph = Graph().parse(ttl_file)
+        self.platform_uri = "http://www.w3.org/ns/sosa/Platform"
+        self.site_uri = "http://example.org/ontology#SI"
+        self.rf_uri = "http://example.org/ontology#RF"
+
+    def get_uri(self, label):
+        """
+        Gets a URI by label, regardless of the type
+        """
+        q = prepareQuery(f"""
+            SELECT ?s ?type WHERE {{
+              ?s skos:prefLabel ?label .
+              ?s a ?type .
+              FILTER (str(?label) = ?target && ?type != owl:NamedIndividual)
+            }}            
+            """, initNs={"skos": SKOS, "rdf": RDF, "owl": OWL})
+
+        results = self.graph.query(q, initBindings={"target": Literal(label)})
+        if len(results) == 0:
+            raise LookupError(f"No results for {label}")
+
+        for result in results:
+            if not result.type:
+                pass
+            else:
+                return str(result.s), str(result.type)
+
+    def check_element(self, label, element):
+        try:
+            uri, stype = self.get_uri(label)
+        except LookupError:
+            return False
+        if stype == element:
+            return True
+        return False
+
+    def check_platform(self, label):
+        return self.check_element(label, self.platform_uri)
+
+    def check_site(self, label):
+        return self.check_element(label, self.site_uri)
+
+    def check_rf(self, label):
+        return self.check_element(label, self.rf_uri)
+
+
 
 class EmsoMetadata:
     def __init__(self, force_update=False):
@@ -267,6 +328,9 @@ class EmsoMetadata:
         edmo_codes_jsonld = os.path.join(".emso", "edmo_codes.json")
         spdx_licenses_file = os.path.join(".emso", "spdx_licenses.md")
         copernicus_params_file = os.path.join(".emso", "copernicus_param_list.xlsx")
+        cf_std_name_units_file = os.path.join(".emso", "standard_name_units.xml")
+        dwc_terms_file = os.path.join(".emso", "dwc_terms.csv")
+        oso_ontology_file = os.path.join(".emso", "oso.ttl")
 
         tasks = [
             [emso_metadata_url, emso_metadata_file, "EMSO metadata"],
@@ -282,34 +346,50 @@ class EmsoMetadata:
             [sdn_vocab_l35, sdn_vocab_l35_file, "SDN Vocab L35"],
             [edmo_codes, edmo_codes_jsonld, "EDMO codes"],
             [spdx_licenses_github, spdx_licenses_file, "spdx licenses"],
-            [copernicus_param_list, copernicus_params_file, "spdx licenses"]
+            [copernicus_param_list, copernicus_params_file, "spdx licenses"],
+            [cf_standard_name_units_url, cf_std_name_units_file, "CF units"],
+            [dwc_terms_url, dwc_terms_file, "DwC terms"],
+            [oso_ontology_url, oso_ontology_file, "OSO"]
         ]
 
         download_files(tasks)
 
         tables = process_markdown_file(emso_metadata_file)
+
         self.global_attr = tables["Global Attributes"]
-        self.variable_attr = tables["Variable Attributes"]
-        self.dimension_attr = tables["Dimension Attributes"]
-        self.qc_attr = tables["Quality Control Attributes"]
-        self.technical_attr = tables["Technical Variables"]
+        self.env_coordinate_attr = tables["Coordinate Variables"]
+
+        self.cor_variables_attr = tables["Coordinate Variables"]
+        self.env_variables_attr = tables["Environmental Variables"]
+        self.bio_variables_attr = tables["Biological Variables"]
+        self.qc_variables_attr = tables["Quality Control Variables"]
+        self.tec_variables_attr = tables["Technical Variables"]
+        self.sensor_variables_attr = tables["Sensor Variables"]
+        self.platform_variables_attr = tables["Platform Variables"]
+        self.valid_coordinates = tables["Valid Coordinates"]
 
         tables = process_markdown_file(oceansites_file)
-        self.oceansites_sensor_mount = list(tables["Sensor Mount"]["sensor_mount"].values)
-        self.oceansites_sensor_orientation = list(tables["Sensor Orientation"]["sensor_orientation"].values)
-        self.oceansites_data_modes = list(tables["Data Modes"]["Value"].values)
-        self.oceansites_data_types = list(tables["Data Types"]["Data type"].values)
+        self.oceansites_sensor_mount = tables["Sensor Mount"]["sensor_mount"].to_list()
+        self.oceansites_sensor_orientation = tables["Sensor Orientation"]["sensor_orientation"].to_list()
+        self.oceansites_data_modes = tables["Data Modes"]["Value"].to_list()
+        self.oceansites_data_types = tables["Data Types"]["Data type"].to_list()
 
         tables = process_markdown_file(emso_sites_file)
-        self.emso_regional_facilities = list(tables["EMSO Regional Facilities"]["EMSO Regional Facilities"].values)
-        self.emso_sites = list(tables["EMSO Sites"]["EMSO Site"].values)
+        self.emso_regional_facilities = tables["EMSO Regional Facilities"]["EMSO Regional Facilities"].to_list()
+        self.emso_sites = tables["EMSO Sites"]["EMSO Site"].to_list()
 
         tables = process_markdown_file(spdx_licenses_file)
         t = tables["Licenses with Short Idenifiers"]
+
         # remove extra '[' ']' in license identifiers
         new_ids = [value.replace("[", "").replace("]", "") for value in t["Short Identifier"]]
         self.spdx_license_names = new_ids
         self.spdx_license_uris = {lic: f"https://spdx.org/licenses/{lic}" for lic in self.spdx_license_names}
+
+        df = pd.read_csv(dwc_terms_file)
+        df = df[["term_localName", "term_iri"]]
+        df = df.rename(columns={"term_localName": "name", "term_iri": "uri"})
+        self.dwc_terms = df
 
         sdn_vocabs = {
             "P01": sdn_vocab_p01_file,
@@ -324,6 +404,7 @@ class EmsoMetadata:
 
         self.sdn_vocabs_ids = {}
         self.sdn_vocabs_pref_label = {}
+        self.sdn_vocabs_alt_label = {}
         self.sdn_vocabs_uris = {}
         self.sdn_vocabs = {}
         self.sdn_vocabs_narrower = {}
@@ -354,7 +435,6 @@ class EmsoMetadata:
                         json.dump(values, f)
             # for vocab, df in self.sdn_vocabs.items():
                 # Storing to CSV to make it easier to search
-                df = df[["id", "uri", "prefLabel", "definition"]]
                 filename = os.path.join(".emso", f"{vocab}.csv")
                 df.to_csv(filename, index=False)
 
@@ -363,6 +443,7 @@ class EmsoMetadata:
             self.sdn_vocabs_broader[vocab] = broader
             self.sdn_vocabs_related[vocab] = related
             self.sdn_vocabs_pref_label[vocab] = df["prefLabel"].values
+            self.sdn_vocabs_alt_label[vocab] = df["altLabel"].values
             self.sdn_vocabs_ids[vocab] = df["id"].values
             self.sdn_vocabs_uris[vocab] = df["uri"].values
 
@@ -374,7 +455,7 @@ class EmsoMetadata:
             self.edmo_codes = pd.read_csv(edmo_csv)
 
         # TODO: Move hardcoded list to OceanSITES_codes.md
-        self.oceansites_param_codes = ["AIRT", "CAPH", "CDIR", "CNDC", "CSPD", "DEPTH", "DEWT", "DOX2", "DOXY",
+        self.oceansites_param_codes = ["AIRT", "CAPH", "CDIR", "CNDC", "CSPD", "depth", "DEWT", "DOX2", "DOXY",
                                        "DOXY_TEMP", "DYNHT", "FLU2", "HCSP", "HEAT", "ISO17", "LW", "OPBS", "PCO2",
                                        "PRES", "PSAL", "RAIN", "RAIT", "RELH", "SDFA", "SRAD", "SW", "TEMP", "UCUR",
                                        "UWND", "VAVH", "VAVT", "VCUR", "VDEN", "VDIR", "VWND", "WDIR", "WSPD"]
@@ -388,6 +469,7 @@ class EmsoMetadata:
         variables = [v for v in variables if len(v) > 1]   # remove empty lines
         self.copernicus_variables = variables
 
+        self.oso = OSO(oso_ontology_file)
 
     @staticmethod
     def clear_downloads():
@@ -427,7 +509,7 @@ class EmsoMetadata:
         Search in vocab <vocab_id> for the element with matching uri and return element identified by key
         """
         uri = self.harmonize_uri(uri)
-        __allowed_keys = ["prefLabel", "id", "definition"]
+        __allowed_keys = ["prefLabel", "id", "definition", "altLabel"]
         if key not in __allowed_keys:
             raise ValueError(f"Key '{key}' not valid, allowed keys: {__allowed_keys}")
 
@@ -436,22 +518,35 @@ class EmsoMetadata:
         if row.empty:
             #raise LookupError(f"Could not get {key} for '{uri}' in vocab {vocab_id}")
             rich.print(f"[red]Could not get {key} for '{uri}' in vocab {vocab_id}")
-            return ""
+            return
+
         return row[key].values[0]
 
-    def vocab_get_by_urn(self, vocab_id, urn, key):
+    def get_vocab_by_uri(self, vocab_id, uri) -> (str, str, str, str):
+        """
+        Search in vocab <vocab_id> for the element with matching uri and return element identified by key
+        :param vocab_id:
+        :param uri: uri
+        :returns: tuple of (uri, urn, prefLabel, altlabel)
+        """
+        uri = self.harmonize_uri(uri)
+        df = self.sdn_vocabs[vocab_id]
+        row = df.loc[df["uri"] == uri]
+        if row.empty:
+            raise LookupError(f"Could not find '{uri}' in vocab {vocab_id}")
+        return row["uri"].values[0], row["id"].values[0], row["prefLabel"].values[0], row["altLabel"].values[0]
+
+
+    def get_vocab_by_urn(self, vocab_id, urn):
         """
         Search in vocab <vocab_id> for the element with matching uri and return element identified by key
         """
-        __allowed_keys = ["prefLabel", "uri", "definition"]
-        if key not in __allowed_keys:
-            raise ValueError(f"Key '{key}' not valid, allowed keys: {__allowed_keys}")
-
+        uri = self.harmonize_uri(urn)
         df = self.sdn_vocabs[vocab_id]
-        row = df.loc[df["id"] == urn]
+        row = df.loc[df["uri"] == uri]
         if row.empty:
-            raise LookupError(f"Could not get {key} for '{urn}' in vocab {vocab_id}")
-        return row[key].values[0]
+            raise LookupError(f"Could not find '{uri}' in vocab {vocab_id}")
+        return row["uri"].values[0], row["id"].values[0], row["prefLabel"].values[0], row["altLabel"].values[0]
 
     def get_relations(self, vocab_id, uri, relation, target_vocab):
         """
