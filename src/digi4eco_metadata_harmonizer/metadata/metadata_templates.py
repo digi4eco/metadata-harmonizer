@@ -9,10 +9,6 @@ license: MIT
 created: 19/4/23
 """
 
-import rich
-import time
-
-
 def quality_control_metadata(long_name):
     """
     Returns the minimal attributes for a quality control variable
