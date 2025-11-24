@@ -14,6 +14,35 @@ To use this repository you need a computer with `python3`, `pip` and `git`. Linu
 sudo apt install python3 python3-pip git -y
 ```
 
+### Managing python packages
+If your system does not allow to directly manage python packages, there are two options, use a virtual environment or use the system's environment.
+
+#### Option 1: Virtual environment
+
+Install virtualenv and create and load a virtual environment: 
+
+```bash
+sudo apt install python3-virtualenv -y
+virtualenv venv
+```
+
+Then load the environment: 
+```bash
+source venv/bin/activatee
+```
+
+This step needs to be loaded every time a terminal is loaded.
+
+#### Option 2: Force the use of the system environment
+
+In some modern linux systems the ability to manage the system environments is disabled by default. To force the use of the system enviornment:
+
+```bash
+sudo rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
+```
+
+⚠️ WARNING: Make sure that the python version matches with your system. 
+
 
 ## Setup this project ##
 1. Download this repository:
