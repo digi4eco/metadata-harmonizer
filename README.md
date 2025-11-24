@@ -1,17 +1,98 @@
 # Metadata Harmonizer #
-This python project contains the tools to connect to an ERDDAP service and assess if the metadata is compliant with the DIGI4ECO Metadata Specifications.
-This project can be used as a standalone cli tool or as a [PyPi](https://pypi.org/project/digi4eco-metadata-harmonizer) package to be integrated with other code.
+This python project contains the tools to generate NetCDF datasets following the [DIGI4ECO Metadata Specifications](https://github.com/digi4eco/digi4eco-metadata-specifications). It contains a set of software tools that help users to create NetCDF datasets, integrate them into ERDDAP and ensure that they are compliant with the metadata specifictaions. This repository also includes a detailed set of examples on how to create NetCDF datasets in a wide variety of fixed and mobile platforms.
 
-## Setup this project ##
-To download this repository:
+Tools included in this repository:
+
+* **generator.py**: Creates NetCDF datasets from simple CSV and YAML files. The CSV files are used as data input and the YAML files are used as metadata input.
+* **erddap_config.py**: Integrates NetCDF files as a new dataset in an ERDDAP server.
+* **metadata_report.py**: Checks the metadata from an ERDDAP dataset or NetCDF file and provides a harmonization score with some tips to improve the metadata records.
+
+
+## Prerequisities ##
+To use this repository you need a computer with `python3`, `pip` and `git`. Linux is strongly recommended. To install them using apt cli interface (ubuntu):
 ```bash
-$ git clone https://github.com/digi4eco-eric/metadata-harmonizer
-$ cd metadata-harmonizer
-$ pip3 install -r requirements.txt
+sudo apt install python3 python3-pip git -y
 ```
 
-## Metadata Tester ##
-Test o run the test on an ERDDAP dataset:
+### Managing python packages
+If your system does not allow to directly manage python packages, there are two options, use a virtual environment or use the system's environment.
+
+#### Option 1: Virtual environment
+
+Install virtualenv and create and load a virtual environment: 
+
+```bash
+sudo apt install python3-virtualenv -y
+virtualenv venv
+```
+
+Then load the environment: 
+```bash
+source venv/bin/activatee
+```
+
+This step needs to be loaded every time a terminal is loaded.
+
+#### Option 2: Force the use of the system environment
+
+In some modern linux systems the ability to manage the system environments is disabled by default. To force the use of the system enviornment:
+
+```bash
+sudo rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
+```
+
+⚠️ WARNING: Make sure that the python version matches with your system. 
+
+
+## Setup this project ##
+1. Download this repository:
+```bash
+git clone https://github.com/digi4eco/metadata-harmonizer
+```
+
+2. Enter the folder with the source code
+```bash
+cd metadata-harmonizer
+```
+3. Install dependencies
+```bash
+pip3 install -r requirements.txt
+```
+## Dataset Generator ##
+This tools takes data in CSV and metadata in YAML files and packs them together into a standardized NetCDF file. In the [examples folder](https://github.com/digi4eco/metadata-harmonizer/tree/main/examples) several example datasets with synthetic data. It uses the following syntax:
+
+```bash
+python3 generator.py --data <CSV files> --metadata <YAML files> [--output <output netcdf file>]
+```
+Where:
+* `--data`: List of CSV files
+* `--metadata`: List of YAML files with metadata
+* `--output`: (optional): Output NetCDF file
+
+The `--data` and the `--metadata` arguments are mandatory. If `--output` is not provided, the resulting dataset will be stored in `out.nc`. 
+For instance, to create a dataset with the example 01:
+
+```bash
+python3 generator.py --data examples/01/*.csv --metadata examples/01/*.yaml --output example01.nc
+```
+
+## ERDDAP Auto-configurator ##
+This tools takes a previously generated NetCDF dataset and automatically integrates it into an ERDDAP server. It can provide the `datasets.xml` chunk to include the dataset, or it can directly modify the `datasets.xml` file if it is passed with the `--xml` argument. It uses the following syntax:
+
+
+```bash
+python3 erddap_config.py <file> <dataset_id> <source> [--xml]
+```
+Where:
+* `file`: NetCDF file where the metadata will be read
+* `dataset_id`: Identifier to be assigned to the ERDDAP dataset
+* `source`: path where the ERDDAP server will find the NetCDF files.
+* `--xml`: (optional) Path to the ERDDAP `datasets.xml` file to automatically integrate the dataset.
+
+⚠️ WARNING: When using docker containers,  for `source` the path inside the container must be used! Make sure to use the [docker volumes](https://docs.docker.com/engine/storage/volumes/) destination path. 
+
+
+## Metadata Report ##
 
 The `metadata_report.py` tool tests if the metadata contained within a dataset (ERDDAP, NetCDF or JSON) is compatible with DIGI4ECO Metadata Specifications.
 
@@ -23,9 +104,8 @@ $ python3 metadata_report.py <erddap url>  -d <dataset_id>  # Run the test for o
 
 For example, to run tests on dataset with id=```Western_Ionian_Sea_CTD_2002_2003``` from DIGI4ECO's central ERDDAP:
 ```bash
-$ python3 metadata_report.py https://erddap.digi4eco.eu  -d Western_Ionian_Sea_CTD_2002_2003
+$ python3 metadata_report.py https://erddap.digi4eco.eu -d Western_Ionian_Sea_CTD_2002_2003
 ```
-
     
 To run tests on all ERDDAP datasets:
 ```bash
@@ -35,45 +115,6 @@ To run tests on a NetCDF file
 ```bash
 $ python3 metadata_report.py <filename> 
 ```
-
-## Dataset Generator ##
-The `generator.py` tool allows to create DIGI4ECO-compliant NetCDF files.
-
-#### Creating a Dataset based on CSV files ####
-To create a NetCDF file from a CSV file, the first step is to generate the minimal metadata template (`.min.json`) based on the CSV file structure. To generate the template use the following command:  
-
-```bash
-$ python3 generator.py --data <filename> --generate <folder> 
-```
-
-A minimal metadata template (`.min.json`) file will be created within the folder. Then, it is required to add the metadata within the minimal metadata template. All attributes with a leading `*` (e.g. `*title`) are mandatory. Attributes with a leading `~` are optional. If not filled, they will be deduced from default values or other parameters. Fields with a leadig `$` will be asked interactively. Once the minimal metadata template is filled we are ready to generate the NetCDF dataset:
-
-```bash
-$ python3 generator.py --data <filename> --metadata <minimal metadata>  --outfile <output nc file> 
-```
-When executing the generator with the `--metadata` option, the minimal metadata template will be expand the metadata and add all default values and derived attributes. The minimal metadata template will be updated with the user choices and derived options. Additionally, a full metadata file (`.full.json`) will be generated and stored alongside the minimal metadata template. The data from the CSV file and the generated metadata will be combined into the NetCDF file espcified with the `--outfile` option.
-
-If some of the default values or derived attributes need to be modified it is possible to modify the full metadata file (`.full.json`) and re-run the generator:
-```bash
-$ python3 generator.py --data <filename> --metadata <full metadata>  --outfile <output nc file> 
-```
-
-The changes in the full metadata file will be reflected on the output nc file.
-
-### Creating a Dataset based on multiple CSV files ###
-
-Several CSV files can be comined into a single NetCDF file. Assuming that we want combine data1.csv and data2.csv into a single NetCDF file: 
-
-```bash
-# Creates minimal metadata templates data1.min.json and data2.min.json
-$ python3 generator.py --data data1.csv data2.csv --generate myfolder
-
-# Edit the minimal metadata files and rerun the generator with the --metadata option
-$ python3 generator.py --data data1.csv data2.csv -m myfolder/data1.min.json myfolder/data2.min.json -o all.nc
-```
-
-Now the data from both files is combined into the `all.nc` file. Note that there is some metadata overlapping in the data1.min.json and data2.min.json. In case of a conflicting attribute the values in the leftmost file will prevail.
-
 
 ### Contact info ###
 
