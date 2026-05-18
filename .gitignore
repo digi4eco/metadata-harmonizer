@@ -1,9 +1,12 @@
 .emso
-.digi4eco
-*.nc
-log
 *.json
 **/__pycache__/**
 .idea
 venv
 tests/**
+do-no-sync
+log
+BACKUPS
+do-not-sync
+dist
+src/emso_metadata_harmonizer.egg-info/*

@@ -1,124 +1,174 @@
-# Metadata Harmonizer #
-This python project contains the tools to generate NetCDF datasets following the [DIGI4ECO Metadata Specifications](https://github.com/digi4eco/digi4eco-metadata-specifications). It contains a set of software tools that help users to create NetCDF datasets, integrate them into ERDDAP and ensure that they are compliant with the metadata specifictaions. This repository also includes a detailed set of examples on how to create NetCDF datasets in a wide variety of fixed and mobile platforms.
+[![DOI](https://zenodo.org/badge/670241787.svg)](https://doi.org/10.5281/zenodo.20071769)
 
-Tools included in this repository:
+# Metadata Harmonizer Toolbox #
+This repository contains a set of tools that can be used to create NetCDF files, integrate them into an ERDDAP server 
+and to ensure the compliance with the [EMSO Metadata Specifications](https://github.com/emso-eric/emso-metadata-specifications/tree/develop).
+The tools provided here are:
+* `generator`: creates EMSO-compliant NetCDF files from `.csv` and `.yaml` files  
+* `erddap_config`: integrates NetCDF files into an ERDDAP server
+* `metadata_report`: check the compliance of a dataset with the specifications.
 
-* **generator.py**: Creates NetCDF datasets from simple CSV and YAML files. The CSV files are used as data input and the YAML files are used as metadata input.
-* **erddap_config.py**: Integrates NetCDF files as a new dataset in an ERDDAP server.
-* **metadata_report.py**: Checks the metadata from an ERDDAP dataset or NetCDF file and provides a harmonization score with some tips to improve the metadata records.
+The tools in this repository can be used in two different ways:
+
+1. **From this repository** (source code) – by cloning this project and running the scripts locally (instructions below).
+2. **As a Python package** – by installing the released version from PyPI.
+
+> ⚠️ **Important:**  
+> The installation instructions in this README refer to cloning and using the source code from this repository. If you only want to use the toolbox as a Python package via `pip`, please install it from PyPI instead:  
+> 👉 https://pypi.org/project/emso-metadata-harmonizer/
+
+In order to  create and publish an EMSO-compliant dataset, the typical workflow is:
+1. Prepare CSV data and YAML metadata
+2. Generate EMSO-compliant NetCDF files using `generator`
+3. Integrate datasets into your ERDDAP deployment using `erddap_config`
+4. Validate metadata and operational compliance using `metadata_report`
+
+## 🚀 Project Setup ##
+### Installing this repository
 
 
-## Prerequisities ##
-To use this repository you need a computer with `python3`, `pip` and `git`. Linux is strongly recommended. To install them using apt cli interface (ubuntu):
+Previous requirements are `python 3.8+`,`git` and `pip`. All commands here are for unix-like OS, for Windows users it 
+is recommended to use [Ubuntu WSL](https://ubuntu.com/desktop/wsl). If PowerShell or Windows cli is used make sure to change the
+unix-like paths (`path/to/file.csv`) to Windows-like paths (`.\path\to\file.csv`).
+
+Alternatively, you can use this repository, just clone and install its requirements:
+1. Clone this repository
 ```bash
-sudo apt install python3 python3-pip git -y
+git clone https://github.com/emso-eric/metadata-harmonizer
 ```
-
-### Managing python packages
-If your system does not allow to directly manage python packages, there are two options, use a virtual environment or use the system's environment.
-
-#### Option 1: Virtual environment
-
-Install virtualenv and create and load a virtual environment: 
-
-```bash
-sudo apt install python3-virtualenv -y
-virtualenv venv
-```
-
-Then load the environment: 
-```bash
-source venv/bin/activatee
-```
-
-This step needs to be loaded every time a terminal is loaded.
-
-#### Option 2: Force the use of the system environment
-
-In some modern linux systems the ability to manage the system environments is disabled by default. To force the use of the system enviornment:
-
-```bash
-sudo rm -f /usr/lib/python3.12/EXTERNALLY-MANAGED
-```
-
-⚠️ WARNING: Make sure that the python version matches with your system. 
-
-
-## Setup this project ##
-1. Download this repository:
-```bash
-git clone https://github.com/digi4eco/metadata-harmonizer
-```
-
-2. Enter the folder with the source code
+2. Enter the folder:
 ```bash
 cd metadata-harmonizer
 ```
-3. Install dependencies
+
+3. Install the requirements:
 ```bash
 pip3 install -r requirements.txt
 ```
-## Dataset Generator ##
-This tools takes data in CSV and metadata in YAML files and packs them together into a standardized NetCDF file. In the [examples folder](https://github.com/digi4eco/metadata-harmonizer/tree/main/examples) several example datasets with synthetic data. It uses the following syntax:
+
+
+## 🛠 NetCDF Generator ##
+
+The NetCDF generator creates EMSO-compliant NetCDF datasets from one or more CSV files. The basic workflow is as follows:
+1. Encode your **data** as csv files, preferably one file per sensor. Add a `sensor_id` with the identifier of your sensor. Remember to add your QC columns as well. 
+2. Write the **metadata** for your dataset in one or more yaml files. The following sections are required:  `global`, `variables`, `platforms` and `sensors`.
+3. Run the `generator.py` script:
+
+```bash 
+python3 generator.py -d <csv files> -m <yaml files> --out <NetCDF file>
+```
+It is strongly recommended to check the [examples folder](https://github.com/emso-eric/metadata-harmonizer/tree/develop/examples), where there is a comprehensive list of datasets 
+covering different scenarios. For instance, to generate the nc file for the first example:
 
 ```bash
-python3 generator.py --data <CSV files> --metadata <YAML files> [--output <output netcdf file>]
+python3 generator.py -m examples/01/*.yaml -d examples/01/*.csv --out example01.nc  
 ```
-Where:
-* `--data`: List of CSV files
-* `--metadata`: List of YAML files with metadata
-* `--output`: (optional): Output NetCDF file
 
-The `--data` and the `--metadata` arguments are mandatory. If `--output` is not provided, the resulting dataset will be stored in `out.nc`. 
-For instance, to create a dataset with the example 01:
+#### Options:
+* `-d` or `--data`: list of csv files containing the data (mandatory)
+* `-m` or `--metadata`: list of yaml files containing the metadata (mandatory)
+* `-v` or `--verbose`: verbose output
+* `-o` or `--output`: name of the .nc file generated, by default `out.nc`
+* `-k` or `--keep-names`: keep the original coordinate variable names.   
+* `-i` or `--ignore-extra-cols`: ignore columns in the csv files that are not defined in the metadata.
+* `-l` or `--log-level`: define the log level (`debug`, `info`, `warning` or `error`)
+* `-K` or `--no-keywords: Prevents the script from adding automatically guessed keywords to the metadata.
+* `--specs`: Used a local file to read the EMSO Metadata Specifications instead of the public file in github
+* `--clear`: clear all cached resources, forces download of all vocabularies
 
+By default, the `generator.py` will convert the coordinate variable names to lower case (e.g. time, depth...). If the
+user wants to explicitly retain the source names, the `--keep-names` option can be used. Note that the NetCDF files 
+won't be compliant with the EMSO metadata specifications, although it is still possible to create an ERDDAP-compliant 
+dataset if the proper mappings are used (see next section).
+
+
+## ⚙️ ERDDAP Configurator ##
+
+The ERDDAP Configurator (`erddap_config.py`) helps prepare ERDDAP dataset definitions for NetCDF files, reducing manual
+work editing ERDDAP’s XML configurations. It reads NetCDF metadata and generates XML chunk required to register a new 
+dataset. If the `datasets.xml` path is passed, it will automatically append or update dataset configuration. 
+
+In order to run the ERDDAP configurator:
+  
 ```bash
-python3 generator.py --data examples/01/*.csv --metadata examples/01/*.yaml --output example01.nc
+python3 erddap_config.py <nc_file> <dataset_id> <source> 
 ```
+where:
+* `nc_file` is the path to a NetCDF to extract its metadata and structure
+* `dataset_id`, identifier assigned to the ERDDAP dataset.
+* `source` source folder to scan for `.nc`  files.
 
-## ERDDAP Auto-configurator ##
-This tools takes a previously generated NetCDF dataset and automatically integrates it into an ERDDAP server. It can provide the `datasets.xml` chunk to include the dataset, or it can directly modify the `datasets.xml` file if it is passed with the `--xml` argument. It uses the following syntax:
+The `source` value will be set in the `<fileDir>` option of the dataset configuration. This is the path where the ERDDAP
+server will scan for .nc files to be included in the dataset. Note that if the ERDDAP server is 
+deployed inside a docker container, the paths inside the container and the paths in the host will most likely be 
+different. Check the official [docker documentation](https://docs.docker.com/engine/storage/volumes/) on volumes and the  
+[ERDDAP documentation](https://erddap.github.io/docs/server-admin/datasets#eddtablefromfilenames-data) 
+for more information.
 
 
+#### Additional Options:
+* `-x` or `--xml` path to the `datasets.xml` to automatically integrate the dataset
+* `-v` or `--verbose`: verbose output
+* `-o` or `--output`: store the xml chunk in a file
+* `-m` or `--mapping`: provide a mapping file to finetune the dataset source/destination names and attributes.
+* `-r` or `--regex`: Allows you to specify a custom regex expression for ERDDAP's fileNameRegexCreate (defaults to ".*").
+* `-R` or `--recursive`: A flag to instruct ERDDAP to scan the source data directory recursively (defaults to `false`)
+* `-l` or `--log-level`: define the log level (`debug`, `info`, `warning` or `error`)
+
+The `--mapping` option allows you to create EMSO-compliant datasets from NetCDF files that do not follow the EMSO Metadata
+Specifications. This achieved by specifying the source and destination variable names and by adding/overloading 
+attributes. Check the examples [13](https://github.com/emso-eric/metadata-harmonizer/tree/develop/examples/13) and
+[14](https://github.com/emso-eric/metadata-harmonizer/tree/develop/examples/14) for additional info. 
+
+
+## 📈 Metadata Report ##
+
+The metadata reporting tool assesses the level of compliance of an ERDDAP or NetCDF dataset with the EMSO Metadata 
+Specifications. To test a dataset, use the following syntax:
 ```bash
-python3 erddap_config.py <file> <dataset_id> <source> [--xml]
+python3 metadata_report.py <target> 
 ```
-Where:
-* `file`: NetCDF file where the metadata will be read
-* `dataset_id`: Identifier to be assigned to the ERDDAP dataset
-* `source`: path where the ERDDAP server will find the NetCDF files.
-* `--xml`: (optional) Path to the ERDDAP `datasets.xml` file to automatically integrate the dataset.
+Where `target` is the dataset under test, `.nc` files and ERDDAP dataset URLs are accepted. If `target` points to an ERDDAP 
+but no dataset is selected, the metadata reporting tool will assess all datasets in the server. 
 
-⚠️ WARNING: When using docker containers,  for `source` the path inside the container must be used! Make sure to use the [docker volumes](https://docs.docker.com/engine/storage/volumes/) destination path. 
-
-
-## Metadata Report ##
-
-The `metadata_report.py` tool tests if the metadata contained within a dataset (ERDDAP, NetCDF or JSON) is compatible with DIGI4ECO Metadata Specifications.
-
-To test an erddap dataset:
+To run the metadata report against an example NetCDF file:
 ```bash
-$ python3 metadata_report.py <erddap url>  --list  # get the list of datasets
-$ python3 metadata_report.py <erddap url>  -d <dataset_id>  # Run the test for one dataset
+python3 metadata_report.py examples/01/example01.nc
 ```
 
-For example, to run tests on dataset with id=```Western_Ionian_Sea_CTD_2002_2003``` from DIGI4ECO's central ERDDAP:
+To run the metadata report against a public ERDDAP dataset:
 ```bash
-$ python3 metadata_report.py https://erddap.digi4eco.eu -d Western_Ionian_Sea_CTD_2002_2003
+python3 metadata_report.py https://netcdf-dev.obsea.es/erddap/tabledap/01.html
 ```
-    
-To run tests on all ERDDAP datasets:
-```bash
-$ python3 metadata_report.py <erddap url> 
-```
-To run tests on a NetCDF file
-```bash
-$ python3 metadata_report.py <filename> 
-```
+⚠️ _WARNING: when assessing the compliance of the dataset, the metadata reporting tool will download the **whole 
+dataset** as a big NetCDF file locally, checking subsets of data is currently not implemented._
+
+The report provides mainly two outputs, a **metadata** harmonization score and its **operational** validity. **Metadata** tests ensure
+that the proper attributes can be found, including variable attributes. The metadata tests provide a harmonization score
+as a percentage for required and optional tests. The desired harmonization score is 100% for required tests. The score
+for optional tests should be taken as qualitative information, since optional metadata fields may not be relevant in 
+certain circumstances. 
+
+On the other hand, **operational** tests ensure that the dataset is technically sound, it has the expected coordinate reference system and 
+all the sensor / platform metadata is traceable. It shows errors, warning and information messages, but ultimately 
+provides a binary output, whether the dataset is operationally valid or not.
+
+#### Additional Options:
+* `-v` or `--verbose`: verbose output
+* `-o` or `--output`: store the summary of the results as a csv file
+* `-c` or `--csv`: Folder where to store the reports of all datasets
+* `-s` or `--summary`: Display a table with a summary of all reports, useful for batch analysis
+* `-i` or `--ignore-ok`: do not show successful metadata tests, used to reduce the reports' verbosity
+* `-V` or `--variables`: list of variables to test, other variables will be ignored.
+* `-k` or `--keywords`: provide a full analysis of keywords and guess additional keywords
+* `-q` or `--quiet`: do not print the full report on the stdout
+* `-l` or `--log-level`: define the log level (`debug`, `info`, `warning` or `error`)
+* `--specs`: Used a local file to read the EMSO Metadata Specifications instead of the public file in github
+* `--clear`: clear all cached resources, forces download of all vocabularies
 
 ### Contact info ###
 
 * **author**: Enoc Martínez  
-* **version**: v0.1
+* **version**: v1.0.5   
 * **organization**: Universitat Politècnica de Catalunya (UPC)    
 * **contact**: enoc.martinez@upc.edu  

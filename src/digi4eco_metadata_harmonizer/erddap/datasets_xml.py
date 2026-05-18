@@ -12,35 +12,207 @@ import os
 import shutil
 import lxml.etree as etree
 import pandas as pd
-from ..metadata.waterframe import WaterFrame
-from ..metadata.xmlutils import get_element, append_after
 from datetime import datetime
 import rich
+import logging
+from ..metadata.metadata_templates import coordinate_default_name
+from ..metadata.waterframe import WaterFrame
+from ..metadata.xmlutils import get_element
+
+logger = logging.getLogger("emso_metadata_harmonizer")
 
 
-def generate_erddap_dataset(wf: WaterFrame, directory, dataset_id, file_access=True):
+def get_erddap_data_type(series: pd.Series):
+    # Get the data type
+    if series.name.endswith("_QC"):
+        dtype = "ubyte"
+    elif pd.api.types.is_float_dtype(series.dtype):
+        dtype = "double"
+    elif pd.api.types.is_integer_dtype(series.dtype):
+        dtype = "int"
+    elif pd.api.types.is_string_dtype(series.dtype):
+        dtype = "String"
+    elif pd.api.types.is_datetime64_ns_dtype(series.dtype):
+        dtype = "double"
+    return dtype
+
+def generate_erddap_dataset(wf: WaterFrame, directory, dataset_id, recursive: bool =False, file_access=True, filename_regex=".*", mapping={}):
     """
-    Generates a XML chunk to add it into ERDDAP's datasets.xml
-    :param wf: waterframe with data and metadata
+    Generates a XML chunk to add it into ERDDAP's datasets.xml. The Variables are going to be ordered as follows:
+    1. Coordinates
+    2. Variables
+    3. Quality Control
+
+    :param wf: WaterFrame with data and metadata
     :param directory: path where the NetCDF files will be stored
     :param dataset_id: datsetID to identify the dataset
+    :param file_access: toggles on/off the direct file access
+    :param mapping: dictionary containing mapping info to rename variables and/or override attributes
+    :param params: extra global configuration options
     returns: a string containing the datasets.xml chunk to setup the dataset
     """
-    assert  isinstance(wf, WaterFrame), f"Expected WaterFrame (got {type(wf)})"
-    # dimension_name, data_type, special_attributes
-    erddap_dims = [
-        ("time", "double", {"units": "seconds since 1970-01-01", "time_precision": "1970-01-01T00:00:00Z" }),
-        ("depth", "float", {"units": "m"}),
-        ("latitude", "float", {}),
-        ("longitude", "float", {})
-        # ("platform_id", "String", {}),
-        # ("sensor_id", "byte", {})
-    ]
+    assert isinstance(wf, WaterFrame), f"Expected WaterFrame (got {type(wf)})"
+    assert isinstance(directory, str), f"Expected str for directory (got {type(directory)})"
 
-    erddap_qc = [v for v in wf.data.columns if v.endswith("_QC")]
+    log = logging.getLogger()
+
+    vocab = wf.vocabulary
+    if mapping:
+        # convert from array to a dict with source as the key
+        log.info(f"Using user-supplied variable mapping")
+        var_mapping = {d["source"]: d for d in mapping["mapping"]["variables"]}
+        attr_mapping = mapping["mapping"]["attributes"]
+    else:
+        var_mapping = {}
+        attr_mapping = {}
+
+    # get the coordinate names from the WaterFrame
+    _time, _depth, _latitude, _longitude, _sensor_id, _platform_id = wf.get_coordinate_names()
+
+    # all_variables hosts the list of all variables that will be used to generate its ERDDAP config
+    # source = [source, destination, type, attributes, all_attributes]
+    #   source: ERDDAP source name
+    #   destination: ERDDAP destination name
+    #   attributes: attributes to be explicitly overwritten
+    #   all_attributes: rest of the attributes, attached here to simplify search
+    all_variables = {}
 
 
-    if "infoUrl" in wf.metadata.keys(): # If infoURL not set, use the edmo uri
+    #---- Step 1. update the vocabulary with the mapping metadata
+    for varname, var_meta in vocab.items():
+        attributes = {}
+        if varname in var_mapping.keys():
+            # If we have a mapping for this variable, set the destination and merge the attributes
+            var_meta.update(var_mapping[varname]["attributes"])
+
+    #---- Step 2. Create new entries in vocabulary for the missing metadata
+    for varname, mapping in var_mapping.items():
+        if varname not in wf.vocabulary.keys():
+            logger.info(f"Variable {varname} not defined in WaterFrame, using mapping config")
+            attributes = {}
+            if "attributes" in mapping.keys():
+                attributes = mapping["attributes"]
+
+            source = mapping["source"]
+            vocab[source] = attributes
+
+    #---- Step 3. Create the all_variables structure
+    for varname, value in vocab.items():
+        source = varname
+        attributes = {}  # By default, do not modify attributes
+        if varname in var_mapping.keys():
+            # If we have a mapping for this variable, set the destination and merge the attributes
+            if "destination" in var_mapping[varname].keys():
+                destination = var_mapping[varname]["destination"]
+            else: # By default, use source=destination
+                destination = var_mapping[varname]["source"]
+            attributes = var_mapping[varname]["attributes"]
+        else:
+            try:
+                # Get the default coordinate name
+                destination = coordinate_default_name(source)
+            except LookupError:
+                destination = varname
+
+        if varname in wf.data.columns:
+            # If we have a data type use the dtype from the data type
+            dtype = get_erddap_data_type(wf.data[varname])
+
+        elif varname in var_mapping.keys():
+            try:
+                dtype = var_mapping[varname]["dataType"]
+            except KeyError:
+                try:
+                    print(wf.data)
+                    dtype = get_erddap_data_type(wf.data[varname])
+                except KeyError:
+                    raise ValueError(f"Variable '{varname}' dataType must be defined in the mapping")
+        else:
+            raise ValueError(f"Variable '{varname}' dataType not found in DataFrame nor in mapping")
+
+        all_variables[destination] = [source, destination, dtype, attributes, vocab[varname]]
+
+
+    # Now, let's apply missing mapping
+    for key, m in var_mapping.items():
+        if key not in all_variables.keys():
+            attributes = {}
+            if "attributes" in m.keys():
+                attributes = m["attributes"]
+            dtype = m.get("dataType", "float")
+            all_variables[m["destination"]] = [m["source"], m["destination"], dtype, attributes, attributes]
+
+
+    # Make sure that ALL QC variables have the proper data type
+    for varname, var in all_variables.items():
+        if varname.endswith("_QC"):
+            var[2] = "ubyte"  # make sure data type is byte
+            if "variable_type" not in vocab[varname].keys() or vocab[varname]["variable_type"] != "quality_control":
+                var[3]["variable_type"] = "quality_control"
+            all_variables[varname] = var
+
+    # Now let's organize all variables in the following order:
+    #  1. coordinates
+    #  2. variables
+    #  3. quality control
+    #  4. metadata (sensors and platforms)
+
+    coordinates = []
+    variables =  []
+    quality_control = []
+    sensors = []
+    platforms = []
+    others = []
+
+    def get_variable_config(key, dictionary):
+        if key not in all_variables.copy().keys():
+            return
+        dictionary.append(all_variables.pop(key))
+
+    get_variable_config("time", coordinates)
+    get_variable_config("depth", coordinates)
+    get_variable_config("latitude", coordinates)
+    get_variable_config("longitude", coordinates)
+    get_variable_config("sensor_id", coordinates)
+    get_variable_config("platform_id", coordinates)
+    # Now, get optional coordinates
+    get_variable_config("precise_latitude", coordinates)
+    get_variable_config("precise_longitude", coordinates)
+    get_variable_config("deployment_latitude", coordinates)
+    get_variable_config("deployment_longitude", coordinates)
+    get_variable_config("time_end", coordinates)
+
+    # Get variables
+    for varname in list(all_variables.keys()):
+        try:
+            vartype = vocab[varname]["variable_type"]
+        except KeyError:
+            rich.print(f"[yellow]WARNING: Variable {varname} does not have a defined variable type")
+            vartype = ""
+
+        if vartype == "coordinate":
+            get_variable_config(varname, coordinates)
+        elif vartype in ["environmental", "technical", "biological"]:
+            get_variable_config(varname, variables)
+        elif vartype == "quality_control":
+            get_variable_config(varname, quality_control)
+
+        elif vartype == "sensor":
+            get_variable_config(varname, sensors)
+        elif vartype == "platform":
+            get_variable_config(varname, platforms)
+        else:
+            get_variable_config(varname, others)
+
+    # Now put the rest with a warning
+    for varname in all_variables.copy().keys():
+        rich.print(f"[yellow]WARNING: variable {varname} does not have a proper 'variable_type' attribute!")
+        get_variable_config(varname, others)
+
+
+    all_variables = coordinates + variables + quality_control + sensors + platforms + others
+
+    if "infoUrl" in wf.metadata.keys():  # If infoURL not set, use the edmo uri
         info_url = wf.metadata["infoUrl"]
     elif "institution_edmo_uri" in wf.metadata.keys():
         info_url = wf.metadata["institution_edmo_uri"]
@@ -50,46 +222,52 @@ def generate_erddap_dataset(wf: WaterFrame, directory, dataset_id, file_access=T
     additional_attributes = {}
     cf_feature_type = wf.metadata["featureType"]
 
-    if  cf_feature_type == "timeSeries":
+    qc_vars = [qc[1] for qc in quality_control]  # get QC destination names
+    all_variable_names = [a[1] for a in all_variables]
+
+    if cf_feature_type == "timeSeries":
         cdm_data_type = "timeSeries"
         additional_attributes["cdm_timeseries_variables"] = "platform_id,sensor_id,latitude,longitude,depth"
         position_vars = []
-        if "precise_latitude" in wf.data.columns and "precise_longitude" in wf.data.columns:
-            position_vars = ["precise_latitude", "precise_longitude"]
+        if "precise_latitude" in  all_variable_names and "precise_longitude" in all_variable_names:
+            position_vars += ["precise_latitude", "precise_longitude"]
+        elif "nominal_latitude" in all_variable_names and "nominal_longitude" in all_variable_names:
+            position_vars += ["nominal_latitude", "nominal_longitude"]
 
-        subset_vars_str = ",".join(["platform_id", "sensor_id", "depth"] + erddap_qc + position_vars)
+        subset_vars_str = ",".join(["platform_id", "sensor_id", "depth"] + qc_vars + position_vars)
 
-
-    elif  cf_feature_type == "timeSeriesProfile":
+    elif cf_feature_type == "timeSeriesProfile":
         cdm_data_type = "timeSeriesProfile"
         additional_attributes["cdm_timeseries_variables"] = "platform_id,latitude,longitude"
         additional_attributes["cdm_profile_variables"] = "time,sensor_id"
-        subset_vars_str = ",".join(["platform_id", "sensor_id", "depth"] + erddap_qc)
+        subset_vars_str = ",".join(["platform_id", "sensor_id", "depth"] + qc_vars)
 
-    elif  cf_feature_type == "trajectory":
+    elif cf_feature_type == "trajectory":
         cdm_data_type = "trajectory"
         additional_attributes["cdm_trajectory_variables"] = "platform_id"
-        subset_vars_str = ",".join(["platform_id", "sensor_id"] + erddap_qc)
-    elif  cf_feature_type == "trajectoryProfile":
+        subset_vars_str = ",".join(["platform_id", "sensor_id"] + qc_vars)
+    elif cf_feature_type == "trajectoryProfile":
         cdm_data_type = "trajectory"
         additional_attributes["cdm_trajectory_variables"] = "platform_id"
-        subset_vars_str = ",".join(["platform_id", "sensor_id"] + erddap_qc)
+        subset_vars_str = ",".join(["platform_id", "sensor_id"] + qc_vars)
 
     else:
         raise ValueError(f"Unimplemented CF feature type {cf_feature_type}")
+    if attr_mapping:
+        additional_attributes.update(attr_mapping)  # Add mapping global attributes
 
     if file_access:
         file_access_str = "true"
     else:
         file_access_str = "false"
 
-    x = f"""
+    x = f"""    
 <dataset type="EDDTableFromMultidimNcFiles" datasetID="{dataset_id}" active="true">
     <reloadEveryNMinutes>10080</reloadEveryNMinutes>
     <updateEveryNMillis>10000</updateEveryNMillis>
     <fileDir>{directory}</fileDir>
-    <fileNameRegex>.*</fileNameRegex>
-    <recursive>true</recursive>    
+    <fileNameRegex>{filename_regex}</fileNameRegex>
+    <recursive>{str(recursive).lower()}</recursive>    
     <pathRegex>.*</pathRegex>
     <metadataFrom>last</metadataFrom>
     <metadataFrom>last</metadataFrom>
@@ -113,44 +291,18 @@ def generate_erddap_dataset(wf: WaterFrame, directory, dataset_id, file_access=T
 
     # Add additional global attributes
     for key, value in additional_attributes.items():
-        new_element = etree.Element("att", attrib={"name": key})
-        add_attributes = get_element(root, "addAttributes")
+        add_attribute = get_element(root, "addAttributes")
+        new_element = etree.SubElement(add_attribute, "att", attrib={"name": key})
+        if isinstance(value, list):
+            value = wf.emso.list_to_str(key, value)  # Convert to list following Metadata Specs
+
         new_element.text = value
-        append_after(add_attributes, "att", new_element)
 
-    for varname, dtype, attrs in erddap_dims:
-        add_variable(root, varname, varname, dtype, attributes=attrs)
-
-    dimension_names = [v[0] for v in erddap_dims]
-
-    # Convert from Pandas dtype to ERDDAP dtype
-    for v in wf.data.columns:
-        if v in dimension_names:
-            continue
-        if v.endswith("_QC"):
-            dtype = "ubyte"
-        elif pd.api.types.is_float_dtype(wf.data[v].dtype):
-            dtype = "float"
-        elif pd.api.types.is_integer_dtype(wf.data[v].dtype):
-            dtype = "int"
-        elif pd.api.types.is_string_dtype(wf.data[v].dtype):
-            dtype = "String"
-        else:
-            raise ValueError(f"Unimplemented data type {wf.data[v].dtype}")
-
-        add_variable(root, v, v, dtype, attributes={})
-
-    for sensor in wf.sensors.values():
-        name = sensor["sensor_id"]
-        add_variable(root, name, name, "String", attributes={})
-
-    for platform in wf.platforms.values():
-        name = platform["platform_id"]
-        add_variable(root, name, name, "String", attributes={})
+    for source, destination, dtype, attrs, _ in all_variables:
+        add_variable(root, source, destination, dtype, attributes=attrs)
 
     etree.indent(root, space="    ", level=0)  # force indentation
     return serialize(tree)
-
 
 def read_xml(filename):
     """
@@ -235,21 +387,10 @@ def add_dataset(filename: str, dataset: str):
     except LookupError:
         pass
 
+    comment = etree.Comment(f" ======== Dataset {dataset_id} configuration ========")
+    root.append(comment)
     root.append(dataset_root)
     with open(filename, "w") as f:
         xml = etree.tostring(tree, encoding="UTF-8", pretty_print=True, xml_declaration=True)
         s = xml.decode()
         f.write(s)
-
-
-
-
-
-
-
-
-
-
-
-
-

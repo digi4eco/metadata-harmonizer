@@ -8,14 +8,14 @@ email: enoc.martinez@upc.edu
 license: MIT
 created: 26/4/23
 """
+import hashlib
 from logging.handlers import TimedRotatingFileHandler
+from typing import Optional, Dict
+
 import requests
 import rich
-from rich.progress import Progress
-import urllib
 import concurrent.futures as futures
 import os
-from .constants import dimensions
 import logging
 
 # Color codes
@@ -56,7 +56,10 @@ def group_metadata_variables(metadata):
         if "variable_type" not in var.keys():
             d["unclassified"][varname] = var
 
-        vartype = var["variable_type"]
+        if "variable_type" not in var.keys():
+            vartype = "unclassified"
+        else:
+            vartype = var["variable_type"]
 
         if vartype not in d.keys():
             d["unclassified"][varname] = var
@@ -114,16 +117,31 @@ def threadify(arg_list, handler, max_threads=10):
         return final_results
 
 
-def download_file(url, file):
+def download_file(url: str, filename: str, headers: Optional[Dict[str, str]] = None, chunk_size: int = 8192) -> None:
     """
-    wrapper for urllib.error.HTTPError
+    Download a file from a URL and save it to disk.
+
+    Args:
+        url: The URL to download from
+        filename: The local path where to save the file
+        headers: Optional HTTP headers to include in the request
+        chunk_size: Size of chunks to stream the download (default 8KB)
     """
-    try:
-        return urllib.request.urlretrieve(url, file)
-    except urllib.error.HTTPError as e:
-        rich.print(f"[red]{str(e)}")
-        rich.print(f"[red]Could not download from {url} to file {file}")
-        raise e
+    if headers is None:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; DataDownloader/1.0)',
+            'Accept': '*/*'
+        }
+
+    response = requests.get(url, headers=headers, stream=True)
+    response.raise_for_status()
+
+    os.makedirs(os.path.dirname(filename) if os.path.dirname(filename) else '.', exist_ok=True)
+
+    with open(filename, 'wb') as file:
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            if chunk:
+                file.write(chunk)
 
 
 def download_files(tasks, force_download=False):
@@ -178,38 +196,54 @@ def get_file_list(dir_name):
             all_files.append(full_path)
     return all_files
 
+def get_dir_list(dir_name):
+    """
+     create a list of file and sub directories names in the given directory
+     :param dir_name: directory name
+     :returns: list of all files with relative path
+     """
+    file_list = os.listdir(dir_name)
+    all_dirs = list()
+    for entry in file_list:
+        full_path = os.path.join(dir_name, entry)
+        if os.path.isdir(full_path):
+            all_dirs.append(full_path)
+            all_dirs = all_dirs + get_dir_list(full_path)
+
+    all_dirs = sorted(all_dirs, reverse=True)
+    return all_dirs
+
 
 class LoggerSuperclass:
     def __init__(self, logger: logging.Logger, name: str, colour=NRM):
         """
         SuperClass that defines logging as class methods adding a heading name
         """
-        self.__logger_name = name
+        self._logger_name = name
         self.__logger = logger
         if not logger:
             self.__logger = logging  # if not assign the generic module
-        self.__log_colour = colour
+        self._log_colour = colour
 
     def warning(self, *args):
-        mystr = YEL + "[%s] " % self.__logger_name + str(*args) + RST
+        mystr = YEL + "[%s] " % self._logger_name + str(*args) + RST
         self.__logger.warning(mystr)
 
     def error(self, *args, exception: any = False):
-        mystr = "[%s] " % self.__logger_name + str(*args)
+        mystr = "[%s] " % self._logger_name + str(*args)
         self.__logger.error(RED + mystr + RST)
         if exception:
-            if isinstance(exception(), Exception):
-                raise exception(mystr)
-            else:
+            if isinstance(exception, bool):
                 raise ValueError(mystr)
-
+            else:
+                raise exception(mystr)
 
     def debug(self, *args):
-        mystr = self.__log_colour + "[%s] " % self.__logger_name + str(*args) + RST
+        mystr = self._log_colour + "[%s] " % self._logger_name + str(*args) + RST
         self.__logger.debug(mystr)
 
     def info(self, *args):
-        mystr = self.__log_colour + "[%s] " % self.__logger_name + str(*args) + RST
+        mystr = self._log_colour + "[%s] " % self._logger_name + str(*args) + RST
         self.__logger.info(mystr)
 
     def setLevel(self, level):
@@ -251,13 +285,11 @@ def setup_log(name, path="log", log_level="debug"):
     filename = os.path.join(path, name)
     if not filename.endswith(".log"):
         filename += ".log"
-    print("Creating log", filename)
-    print("name", name)
 
     logger = logging.getLogger()
     logger.setLevel(level)
     log_formatter = logging.Formatter('%(asctime)s.%(msecs)03d %(levelname)-7s: %(message)s',
-                                      datefmt='%Y/%m/%d %H:%M:%S')
+                                      datefmt='%Y-%m-%d %H:%M:%S')
     handler = TimedRotatingFileHandler(filename, when="midnight", interval=1, backupCount=7)
     handler.setFormatter(log_formatter)
     logger.addHandler(handler)
@@ -265,10 +297,6 @@ def setup_log(name, path="log", log_level="debug"):
     consoleHandler = logging.StreamHandler()
     consoleHandler.setFormatter(log_formatter)
     logger.addHandler(consoleHandler)
-
-    logger.info("")
-    logger.info(f"===== {name} =====")
-
     return logger
 
 
@@ -336,6 +364,9 @@ def assert_type(obj, valid_type):
     """
     assert isinstance(obj, valid_type), f"Expected {valid_type}, but got {type(obj)} instead"
 
+def assert_url(url: str):
+    assert url.startswith("http"), f"Not a valid URL: {url}"
+
 
 def assert_types(obj, valid_types: list):
     """
@@ -363,3 +394,10 @@ def check_url(url):
     except requests.ConnectionError:
         return False
 
+def get_file_md5(filename):
+    md5_hash = hashlib.md5()
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            md5_hash.update(chunk)
+
+    return md5_hash.hexdigest()

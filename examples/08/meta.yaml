@@ -4,27 +4,48 @@ global:
   Conventions: "OceanSITES EMSO CF-1.8"
   institution: "UPC - Universitat Politècnica de Catalunya"
   institution_edmo_code: "2150"
+  institution_ror_uri: "https://ror.org/03mb6wj31"
   update_interval: "void"
-  emso_site: "OBSEA"
-  emso_regional_facility: "Balearic Sea"
+  emso_site_name: "OBSEA"
+  emso_regional_facility_name: "Balearic Sea"
   source: "mooring"
   data_type: "OceanSITES profile data"
   format_version: "1.4"
   network: "EMSO"
   data_mode: "D"
-  project: ""
+  project: "DIGI4ECO GEORGE"
+  project_code: "101112883 101094716"
+  project_uri:
+    - "https://cordis.europa.eu/project/id/101112883"
+    - "https://cordis.europa.eu/project/id/101094716"
   principal_investigator: "Homer Simpson"
   principal_investigator_email: "homer.simpson@fake.com"
   license: "CC-BY-4.0"
+  contributor_name: "Bart Simpson, Peter Griffin, Rick Sánchez"
+  contributor_role: "DataCollector DataManager Researcher"
+  data_processing_level: "L1"
+  data_processing_steps: "L0a L1a L1b"
+  doi: "https://doi.org/10.5281/zenodo.20071769"
+  keywords:
+    - "Electrical conductivity of the water column"   # found in "SeaDataNet Parameter Discovery Vocabulary"
+    - "Salinity of the water column"   # found in "SeaDataNet Parameter Discovery Vocabulary"
+    - "Temperature of the water column"   # found in "SeaDataNet Parameter Discovery Vocabulary"
+    - "Vertical spatial coordinates"   # found in "SeaDataNet Parameter Discovery Vocabulary"
+    - "sea_water_electrical_conductivity"   # found in "Climate and Forecast Standard Names"
+    - "sea_water_pressure"   # found in "Climate and Forecast Standard Names"
+    - "sea_water_temperature"   # found in "Climate and Forecast Standard Names"
+    # GCMD Science keywords
+    - "EARTH SCIENCE > OCEANS > SALINITY/DENSITY > SALINITY"
+    - "EARTH SCIENCE > OCEANS > OCEAN TEMPERATURE > WATER TEMPERATURE"
+    - "EARTH SCIENCE > OCEANS > OCEAN PRESSURE > WATER PRESSURE"
+    # GEMET
+    - "physical oceanography"
 
 platforms:
   Girona500_SN0001:
     long_name: "Girona 500 AUV SN0001"  # human-readable long name of the platform
-    wmo_number: ""  # (optional) World Meteorological Organization platform number
-    emso_ontology_uri: ""  # link to the OSO ontology
-    platform_type: "autonomous underwater vehicle"  # Platform type from the L06 vocabulary
     platform_type_uri: "http://vocab.nerc.ac.uk/collection/L06/current/25/"  # Link to an instance of the L06 vocabulary
-    info_url: "https://iquarobotics.com/girona-500-auv"  # (optional) uri where more information can be obtained
+    platform_reference: "https://iquarobotics.com/girona-500-auv"  # (optional) uri where more information can be obtained
     # (optional) other relevant information
     comment: "Girona 500 is an autonomous underwater vehicle with hovering capability for a maximum depth of 500m. The Girona 500 can be easily configured for multiple tasks thanks to a large payload volume and an open software architecture."
 
@@ -32,10 +53,12 @@ sensors:
   SBE37SMP_SN47472_5496:
     long_name: "Sea-Bird Scientific SBE37 SMP CTD Sensor"  # human-readable name
     sensor_serial_number: "37SMP47472-5496"
-    sensor_mount: "mounted_on_glider"  # mounting from a controlled list
-    sensor_orientation: "downward"  # (optional) only relevant for ADCPs
-    sensor_model_uri: "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1457"
+    sensor_mount: "mounted_on_seafloor_structure"  # mounting from a controlled list
+    sensor_orientation: "upward"  # (optional) only relevant for ADCPs
+    sdn_instrument_uri: "https://vocab.nerc.ac.uk/collection/L22/current/TOOL1457"
     sensor_manufacturer_uri: "http://vocab.nerc.ac.uk/collection/L35/current/MAN0013/"
+    sensor_type_uri: "http://vocab.nerc.ac.uk/collection/L05/current/130/"
+    sensor_reference: "https://www.seabird.com/moored/sbe-37-sm-smp-smp-odo-microcat/family?productCategoryId=54627473786"
 
 variables:
   TEMP:
@@ -43,6 +66,8 @@ variables:
     sdn_parameter_uri: "http://vocab.nerc.ac.uk/collection/P01/current/TEMPST01"
     sdn_uom_uri: "http://vocab.nerc.ac.uk/collection/P06/current/UPAA/"
     standard_name: "sea_water_temperature"
+    reference_scale: "ITS-90"
+
   PRES:
     long_name: "sea water pressure"
     sdn_parameter_uri: "http://vocab.nerc.ac.uk/collection/P01/current/PRESPR01"
@@ -57,9 +82,9 @@ variables:
 
   PSAL:
     long_name: "sea water salinity"
-    sdn_parameter_uri: "http://vocab.nerc.ac.uk/collection/P01/current/PRESPR01"
-    sdn_uom_uri: "http://vocab.nerc.ac.uk/collection/P06/current/UPDB/"
-    standard_name: "sea_water_pressure"
+    sdn_parameter_uri: "http://vocab.nerc.ac.uk/collection/P01/current/PSALST01"
+    sdn_uom_uri: "http://vocab.nerc.ac.uk/collection/P06/current/PSUX/"
+    standard_name: "sea_water_practical_salinity"
 
   SVEL:
     long_name: "speed of sound in sea water"

@@ -16,14 +16,16 @@ import pandas as pd
 import json
 import time
 from .utils import download_files, get_file_list
+from rdflib import Graph, Literal, Namespace
+from rdflib.plugins.sparql import prepareQuery
+from rdflib.namespace import SKOS, RDF, OWL
 
-
-digi4eco_version = "develop"
+emso_version = "feature/v1.0"
 
 # List of URLs
-digi4eco_metadata_url = f"https://raw.githubusercontent.com/digi4eco/digi4eco-metadata-specifications/refs/heads/{digi4eco_version}/DIGI4ECO_metadata.md"
-oceansites_codes_url = f"https://raw.githubusercontent.com/digi4eco/digi4eco-metadata-specifications/refs/heads/{digi4eco_version}/OceanSites_codes.md"
-digi4eco_codes_url = f"https://raw.githubusercontent.com/digi4eco/digi4eco-metadata-specifications/refs/heads/{digi4eco_version}/DIGI4ECO_codes.md"
+emso_metadata_url = f"https://raw.githubusercontent.com/emso-eric/emso-metadata-specifications/{emso_version}/EMSO_metadata.md"
+oceansites_codes_url = f"https://raw.githubusercontent.com/emso-eric/emso-metadata-specifications/{emso_version}/OceanSites_codes.md"
+emso_codes_url = f"https://raw.githubusercontent.com/emso-eric/emso-metadata-specifications/{emso_version}/EMSO_codes.md"
 
 sdn_vocab_p01 = "https://vocab.nerc.ac.uk/downloads/publish/P01.json"
 sdn_vocab_p02 = "https://vocab.nerc.ac.uk/collection/P02/current/?_profile=nvs&_mediatype=application/ld+json"
@@ -35,8 +37,8 @@ sdn_vocab_l22 = "https://vocab.nerc.ac.uk/collection/L22/current/?_profile=nvs&_
 sdn_vocab_l35 = "https://vocab.nerc.ac.uk/collection/L35/current/?_profile=nvs&_mediatype=application/ld+json"
 # standard_names = "https://vocab.nerc.ac.uk/standard_name/?_profile=nvs&_mediatype=application/ld+json"
 
-# edmo_codes = "https://edmo.seadatanet.org/sparql/sparql?query=SELECT%20%3Fs%20%3Fp%20%3Fo%20WHERE%20%7B%20%0D%0A%0" \
-#              "9%3Fs%20%3Fp%20%3Fo%20%0D%0A%7D%20LIMIT%201000000&accept=application%2Fjson"
+edmo_codes = "https://edmo.seadatanet.org/sparql/sparql?query=SELECT%20%3Fs%20%3Fp%20%3Fo%20WHERE%20%7B%20%0D%0A%0" \
+             "9%3Fs%20%3Fp%20%3Fo%20%0D%0A%7D%20LIMIT%201000000&accept=application%2Fjson"
 
 spdx_licenses_github = "https://raw.githubusercontent.com/spdx/license-list-data/main/licenses.md"
 
@@ -46,6 +48,8 @@ copernicus_param_list = "https://archimer.ifremer.fr/doc/00422/53381/108480.xlsx
 cf_standard_name_units_url = "https://cfconventions.org/Data/cf-standard-names/90/src/cf-standard-name-table.xml"
 
 dwc_terms_url = "https://raw.githubusercontent.com/tdwg/dwc/refs/heads/master/vocabulary/term_versions.csv"
+
+oso_ontology_url = "https://raw.githubusercontent.com/emso-eric/oso-ontology/refs/heads/main/docs/ontology.ttl"
 
 def process_markdown_file(file) -> (dict, dict):
     """
@@ -253,37 +257,85 @@ def parse_sdn_jsonld(filename):
 
     return data, narrower, broader, related
 
+class OSO:
+    def __init__(self, ttl_file):
+        self.graph = Graph().parse(ttl_file)
+        self.platform_uri = "http://www.w3.org/ns/sosa/Platform"
+        self.site_uri = "http://example.org/ontology#SI"
+        self.rf_uri = "http://example.org/ontology#RF"
 
-class Digi4EcoMetadata:
+    def get_uri(self, label):
+        """
+        Gets a URI by label, regardless of the type
+        """
+        q = prepareQuery(f"""
+            SELECT ?s ?type WHERE {{
+              ?s skos:prefLabel ?label .
+              ?s a ?type .
+              FILTER (str(?label) = ?target && ?type != owl:NamedIndividual)
+            }}            
+            """, initNs={"skos": SKOS, "rdf": RDF, "owl": OWL})
+
+        results = self.graph.query(q, initBindings={"target": Literal(label)})
+        if len(results) == 0:
+            raise LookupError(f"No results for {label}")
+
+        for result in results:
+            if not result.type:
+                pass
+            else:
+                return str(result.s), str(result.type)
+
+    def check_element(self, label, element):
+        try:
+            uri, stype = self.get_uri(label)
+        except LookupError:
+            return False
+        if stype == element:
+            return True
+        return False
+
+    def check_platform(self, label):
+        return self.check_element(label, self.platform_uri)
+
+    def check_site(self, label):
+        return self.check_element(label, self.site_uri)
+
+    def check_rf(self, label):
+        return self.check_element(label, self.rf_uri)
+
+
+
+class EmsoMetadata:
     def __init__(self, force_update=False):
 
-        os.makedirs(".digi4eco", exist_ok=True)  # create a conf dir to store Markdown and other stuff
-        os.makedirs(os.path.join(".digi4eco", "jsonld"), exist_ok=True)
-        os.makedirs(os.path.join(".digi4eco", "relations"), exist_ok=True)
+        os.makedirs(".emso", exist_ok=True)  # create a conf dir to store Markdown and other stuff
+        os.makedirs(os.path.join(".emso", "jsonld"), exist_ok=True)
+        os.makedirs(os.path.join(".emso", "relations"), exist_ok=True)
         ssl._create_default_https_context = ssl._create_unverified_context
 
-        emso_metadata_file = os.path.join(".digi4eco", "EMSO_metadata.md")
-        oceansites_file = os.path.join(".digi4eco", "OceanSites_codes.md")
-        emso_sites_file = os.path.join(".digi4eco", "EMSO_codes.md")
-        sdn_vocab_p01_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_p01.json")
-        sdn_vocab_p02_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_p02.json")
-        sdn_vocab_p06_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_p06.json")
-        sdn_vocab_p07_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_p07.json")
-        sdn_vocab_l05_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_l05.json")
-        sdn_vocab_l06_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_l06.json")
-        sdn_vocab_l22_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_l22.json")
-        sdn_vocab_l35_file = os.path.join(".digi4eco", "jsonld", "sdn_vocab_l35.json")
-        #edmo_codes_jsonld = os.path.join(".digi4eco", "edmo_codes.json")
-        spdx_licenses_file = os.path.join(".digi4eco", "spdx_licenses.md")
-        copernicus_params_file = os.path.join(".digi4eco", "copernicus_param_list.xlsx")
-        cf_std_name_units_file = os.path.join(".digi4eco", "standard_name_units.xml")
-        dwc_terms_file = os.path.join(".digi4eco", "dwc_terms.csv")
-
+        emso_metadata_file = os.path.join(".emso", "EMSO_metadata.md")
+        oceansites_file = os.path.join(".emso", "OceanSites_codes.md")
+        emso_sites_file = os.path.join(".emso", "EMSO_codes.md")
+        sdn_vocab_p01_file = os.path.join(".emso", "jsonld", "sdn_vocab_p01.json")
+        sdn_vocab_p02_file = os.path.join(".emso", "jsonld", "sdn_vocab_p02.json")
+        sdn_vocab_p06_file = os.path.join(".emso", "jsonld", "sdn_vocab_p06.json")
+        sdn_vocab_p07_file = os.path.join(".emso", "jsonld", "sdn_vocab_p07.json")
+        sdn_vocab_l05_file = os.path.join(".emso", "jsonld", "sdn_vocab_l05.json")
+        sdn_vocab_l06_file = os.path.join(".emso", "jsonld", "sdn_vocab_l06.json")
+        sdn_vocab_l22_file = os.path.join(".emso", "jsonld", "sdn_vocab_l22.json")
+        sdn_vocab_l35_file = os.path.join(".emso", "jsonld", "sdn_vocab_l35.json")
+        edmo_codes_jsonld = os.path.join(".emso", "edmo_codes.json")
+        spdx_licenses_file = os.path.join(".emso", "spdx_licenses.md")
+        copernicus_params_file = os.path.join(".emso", "copernicus_param_list.xlsx")
+        cf_std_name_units_file = os.path.join(".emso", "standard_name_units.xml")
+        dwc_terms_file = os.path.join(".emso", "dwc_terms.csv")
+        oso_ontology_file = os.path.join(".emso", "oso.ttl")
 
         tasks = [
-            [digi4eco_metadata_url, emso_metadata_file, "EMSO metadata"],
+            [emso_metadata_url, emso_metadata_file, "EMSO metadata"],
             [oceansites_codes_url, oceansites_file, "OceanSites"],
-            [digi4eco_codes_url, emso_sites_file, "EMSO codes"],
+            [emso_codes_url, emso_sites_file, "EMSO codes"],
             [sdn_vocab_p01, sdn_vocab_p01_file, "SDN Vocab P01"],
             [sdn_vocab_p02, sdn_vocab_p02_file, "SDN Vocab P02"],
             [sdn_vocab_p06, sdn_vocab_p06_file, "SDN Vocab P06"],
@@ -292,10 +344,12 @@ class Digi4EcoMetadata:
             [sdn_vocab_l06, sdn_vocab_l06_file, "SDN Vocab L06"],
             [sdn_vocab_l22, sdn_vocab_l22_file, "SDN Vocab L22"],
             [sdn_vocab_l35, sdn_vocab_l35_file, "SDN Vocab L35"],
+            [edmo_codes, edmo_codes_jsonld, "EDMO codes"],
             [spdx_licenses_github, spdx_licenses_file, "spdx licenses"],
             [copernicus_param_list, copernicus_params_file, "spdx licenses"],
             [cf_standard_name_units_url, cf_std_name_units_file, "CF units"],
-            [dwc_terms_url, dwc_terms_file, "DwC terms"]
+            [dwc_terms_url, dwc_terms_file, "DwC terms"],
+            [oso_ontology_url, oso_ontology_file, "OSO"]
         ]
 
         download_files(tasks)
@@ -321,11 +375,16 @@ class Digi4EcoMetadata:
         self.oceansites_data_types = tables["Data Types"]["Data type"].to_list()
 
         tables = process_markdown_file(emso_sites_file)
-        self.digi4eco_sites = tables["DIGI4ECO Regional Facilities"]["DIGI4ECO Sites"].to_list()
+        self.emso_regional_facilities = tables["EMSO Regional Facilities"]["EMSO Regional Facilities"].to_list()
+        self.emso_sites = tables["EMSO Sites"]["EMSO Site"].to_list()
 
         tables = process_markdown_file(spdx_licenses_file)
+<<<<<<<<< Temporary merge branch 1
         t = tables["Licenses with Short Identifiers"]
+=========
+        t = tables["Licenses with Short Idenifiers"]
 
+>>>>>>>>> Temporary merge branch 2
         # remove extra '[' ']' in license identifiers
         new_ids = [value.replace("[", "").replace("]", "") for value in t["Short Identifier"]]
         self.spdx_license_names = new_ids
@@ -359,10 +418,10 @@ class Digi4EcoMetadata:
         t = time.time()
         # Process raw SeaDataNet JSON-ld files and store them sliced in short JSON files
         for vocab, jsonld_file in sdn_vocabs.items():
-            csv_filename = os.path.join(".digi4eco", f"{vocab}.csv")
-            frelated = os.path.join(".digi4eco", "relations",  f"{vocab}.related")
-            fnarrower = os.path.join(".digi4eco", "relations",  f"{vocab}.narrower")
-            fbroader = os.path.join (".digi4eco", "relations",  f"{vocab}.broader")
+            csv_filename = os.path.join(".emso", f"{vocab}.csv")
+            frelated = os.path.join(".emso", "relations",  f"{vocab}.related")
+            fnarrower = os.path.join(".emso", "relations",  f"{vocab}.narrower")
+            fbroader = os.path.join (".emso", "relations",  f"{vocab}.broader")
             if os.path.exists(csv_filename):
                 df = pd.read_csv(csv_filename)
                 with open(frelated) as f:
@@ -380,7 +439,7 @@ class Digi4EcoMetadata:
                         json.dump(values, f)
             # for vocab, df in self.sdn_vocabs.items():
                 # Storing to CSV to make it easier to search
-                filename = os.path.join(".digi4eco", f"{vocab}.csv")
+                filename = os.path.join(".emso", f"{vocab}.csv")
                 df.to_csv(filename, index=False)
 
             self.sdn_vocabs[vocab] = df
@@ -392,12 +451,12 @@ class Digi4EcoMetadata:
             self.sdn_vocabs_ids[vocab] = df["id"].values
             self.sdn_vocabs_uris[vocab] = df["uri"].values
 
-        # edmo_csv = os.path.join(".digi4eco", f"edmo_codes.csv")
-        # if not os.path.exists(edmo_csv):
-        #     self.edmo_codes = get_edmo_codes(edmo_codes_jsonld)
-        #     self.edmo_codes.to_csv(edmo_csv, index=False)
-        # else:
-        #     self.edmo_codes = pd.read_csv(edmo_csv)
+        edmo_csv = os.path.join(".emso", f"edmo_codes.csv")
+        if not os.path.exists(edmo_csv):
+            self.edmo_codes = get_edmo_codes(edmo_codes_jsonld)
+            self.edmo_codes.to_csv(edmo_csv, index=False)
+        else:
+            self.edmo_codes = pd.read_csv(edmo_csv)
 
         # TODO: Move hardcoded list to OceanSITES_codes.md
         self.oceansites_param_codes = ["AIRT", "CAPH", "CDIR", "CNDC", "CSPD", "depth", "DEWT", "DOX2", "DOXY",
@@ -414,14 +473,14 @@ class Digi4EcoMetadata:
         variables = [v for v in variables if len(v) > 1]   # remove empty lines
         self.copernicus_variables = variables
 
-
+        self.oso = OSO(oso_ontology_file)
 
     @staticmethod
     def clear_downloads():
         """
-        Clears all files in .digi4eco folder
+        Clears all files in .emso folder
         """
-        files = get_file_list(".digi4eco")
+        files = get_file_list(".emso")
         for f in files:
             if os.path.isfile(f):
                 os.remove(f)

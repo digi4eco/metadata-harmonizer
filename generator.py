@@ -11,9 +11,8 @@ created: 13/4/23
 """
 
 from argparse import ArgumentParser
-import yaml
-from src.digi4eco_metadata_harmonizer import generate_dataset
-from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log
+from src.emso_metadata_harmonizer import generate_dataset
+from src.emso_metadata_harmonizer.metadata.utils import setup_log
 
 
 if __name__ == "__main__":
@@ -22,11 +21,28 @@ if __name__ == "__main__":
     argparser.add_argument("-d", "--data", type=str, help="list of data files (CSV or NetCDF)", required=False,
                            nargs="+", default=[])
     argparser.add_argument("-m", "--metadata", type=str, help="metadata yaml files", required=True, nargs="+")
-    argparser.add_argument("-M", "--metadata-only", help="Generate only a _meta.nc file", action="store_true")
+    argparser.add_argument("-k", "--keep-names", help="Keep source variable names (by default forces ERDDAP-like varnames)", action="store_true")
+    argparser.add_argument("-K", "--no-keywords", help="Do not add guessed keywords (default true)", action="store_true")
     argparser.add_argument("-o", "--output", type=str, help="Output NetCDF file", required=False, default="out.nc")
     argparser.add_argument("--clear", action="store_true", help="Clears all downloads", required=False)
+    argparser.add_argument("-l", "--log-level", type=str, help="Setting log level (debug, info, warn, error or critical)", required=False, default="")
+    argparser.add_argument("-i", "--ignore-extra-cols", action="store_true", help="Ignore data columns not listed in metadata", required=False)
+    argparser.add_argument("--specs", type=str,
+                           help="Use this file as EMSO Metadata specifications source (use only for development)",
+                           default="")
 
     args = argparser.parse_args()
-    log = setup_log("emh", "log")
 
-    generate_dataset(args.data, args.metadata,  args.output, log, meta_only=args.metadata_only)
+    lvl = "info"
+    if args.log_level:
+        lvl = args.log_level.lower()
+    if args.verbose:
+        lvl = "debug"
+    log = setup_log("emh", "log", log_level=lvl)
+
+    generate_dataset(args.data, args.metadata,  args.output,
+                     keep_names=args.keep_names,
+                     no_keywords=args.no_keywords,
+                     ignore_extra_cols=args.ignore_extra_cols,
+                     clear_downloads=args.clear,
+                     specifications=args.specs)

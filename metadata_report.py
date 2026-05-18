@@ -10,32 +10,42 @@ license: MIT
 created: 23/2/23
 """
 from argparse import ArgumentParser
-from src.digi4eco_metadata_harmonizer import metadata_report
+from src.emso_metadata_harmonizer import metadata_report
+from src.emso_metadata_harmonizer.metadata.utils import setup_log
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
     argparser.add_argument("target", type=str, help="ERDDAP service URL, NetCDF file or JSON metadata file", default="", nargs='?')
-    argparser.add_argument("-d", "--datasets", type=str, help="List of datasets to check", nargs="+", default=[])
-    argparser.add_argument("-l", "--list", action="store_true", help="List dataset in ERDDAP and exit")
-    argparser.add_argument("-p", "--print", action="store_true", help="Just pretty-print the metadata")
     argparser.add_argument("-v", "--verbose", action="store_true", help="Shows more info")
-    argparser.add_argument("-s", "--save-metadata", type=str, help="Save dataset's metadata into the specified folder",
-                           default="")
-    argparser.add_argument("-o", "--output", type=str, help="file to store the report of all the datasets", default="")
-    argparser.add_argument("-r", "--report", action="store_true", help="Generate a CSV file for every test")
-    argparser.add_argument("-c", "--clear", action="store_true", help="Clears downloaded files")
-    argparser.add_argument("-t", "--table", action="store_true", help="prints the results in excel compatible table")
+    argparser.add_argument("-o", "--output", type=str, help="file to store the summary of ALL datasets (multiple datasets)", default="")
+    argparser.add_argument("-c", "--csv",  type=str, help="Folder to store CSV files with the report of each dataset", default="")
+    argparser.add_argument("-i", "--ignore-ok", action="store_true", help="do not show tests with positive outcome")
+    argparser.add_argument("-V", "--variables", nargs="+", help="Run test only for a variable subset", default=[])
+    argparser.add_argument("--specs", type=str, help="Use this file as EMSO Metadata specifications source (use only for development)", default="")
+    argparser.add_argument("-l", "--log-level", type=str, help="Setting log level (debug, info, warn, error or critical)", required=False, default="")
+    argparser.add_argument("-k", "--keywords", action="store_true", help="Check the keywords")
+    argparser.add_argument("-s", "--summary", action="store_true", help="Prints a summary of all datasets")
+    argparser.add_argument("-q", "--quiet", action="store_true", help="Do not print the results in the stdout")
+    argparser.add_argument("--clear", action="store_true", help="Clear all downloaded resources")
 
     args = argparser.parse_args()
+
+    log = setup_log("emh", "log", log_level="info")
+    if args.log_level:
+        log.setLevel(args.log_level.upper())
+    if args.verbose:
+        log.setLevel("DEBUG")
+
     metadata_report(
         args.target,
-        datasets=args.datasets,
-        just_list=args.list,
-        just_print=args.print,
         verbose=args.verbose,
-        save_metadata=args.save_metadata,
         output=args.output,
-        report=args.report,
-        clear=args.clear,
-        excel_table=args.table
+        specifications=args.specs,
+        variables=args.variables,
+        ignore_ok=args.ignore_ok,
+        csv_folder=args.csv,
+        keywords=args.keywords,
+        summary=args.summary,
+        quiet=args.quiet,
+        clear_downloads=args.clear
     )

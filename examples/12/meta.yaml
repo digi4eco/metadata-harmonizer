@@ -4,28 +4,44 @@ global:
   Conventions: "OceanSITES EMSO CF-1.8"
   institution: "UPC - Universitat Politècnica de Catalunya"
   institution_edmo_code: "2150"
+  institution_ror_uri: "https://ror.org/03mb6wj31"
   update_interval: "void"
-  site_code: "OBSEA"
-  emso_site: "OBSEA"
-  emso_regional_facility: "Balearic Sea"
+  emso_site_name: "OBSEA"
+  emso_regional_facility_name: "Balearic Sea"
   source: "mooring"
   data_type: "OceanSITES profile data"
   format_version: "1.4"
   network: "EMSO"
   data_mode: "D"
-  project: ""
+  project: "DIGI4ECO GEORGE"
+  project_code: "101112883 101094716"
+  project_uri:
+    - "https://cordis.europa.eu/project/id/101112883"
+    - "https://cordis.europa.eu/project/id/101094716"
   principal_investigator: "Homer Simpson"
   principal_investigator_email: "homer.simpson@fake.com"
   license: "CC-BY-4.0"
+  contributor_name: "Bart Simpson, Peter Griffin, Rick Sánchez"
+  contributor_role: "DataCollector DataManager Researcher"
+  data_processing_level: "L0"
+  data_processing_steps: "L0a"
+  doi: "https://doi.org/10.5281/zenodo.20071769"
+  keywords:
+    # GEMET keywords
+    - 'sound'
+    - 'acoustics'
+    - 'marine environment'
+    - 'marine monitoring'
+    - 'EARTH SCIENCE > OCEANS > OCEAN ACOUSTICS'
 
 platforms:
   OBSEA_seabed_station:
     long_name: "OBSEA Seafloor Observatory"  # human-readable long name of the platform
     wmo_platform_code: "6103565"  # (optional) World Meteorological Organization platform number
-    emso_platform: "OBSEA seabed station"  # link to the OSO ontology
-    platform_type: "mooring"  # Platform type from the L06 vocabulary
+    emso_platform_name: "OBSEA seabed station"  # link to the OSO ontology
+    platform_type_name: "mooring"  # Platform type from the L06 vocabulary
     platform_type_uri: "http://vocab.nerc.ac.uk/collection/L06/current/48/"  # Link to an instance of the L06 vocabulary
-    info_url: "https://obsea.es"  # (optional) uri where more information can be obtained
+    platform_reference: "https://obsea.es"  # (optional) uri where more information can be obtained
     # (optional) other relevant information
     comment: "OBSEA seafloor observatory is a multiparametric cabled observatory located at NW mediterranean sea"
 
@@ -34,6 +50,7 @@ platforms:
     latitude: 41.18212  # nominal latitude
     longitude: 1.75257  # nominal longitude
     depth: 20
+
 
 sensors:
   NAXYS_SN0010:

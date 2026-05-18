@@ -1,3 +1,3 @@
 #!/usr/bin/env python3
-from .digi4eco import Digi4EcoMetadata
+from .emso import EmsoMetadata, init_emso_metadata
 from .utils import setup_log
