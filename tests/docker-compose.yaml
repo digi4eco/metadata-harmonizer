@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     hostname: dummy-erddap
     environment:
-      - "ERDDAP_adminInstitution=EMSO ERIC"
+      - "ERDDAP_adminInstitution=DIGI4ECO"
     ports:
       - 8080:8080
     volumes:

@@ -16,5 +16,5 @@ python3 erddap_config.py example10.nc example10 /path/to/nc/files
   
   
 **Additional info**:  
-* 📂 [Explore the source files](https://github.com/emso-eric/metadata-harmonizer/tree/develop/examples/./10)  
+* 📂 [Explore the source files](https://github.com/digi4eco/metadata-harmonizer/tree/main/examples/./10)  
 * 🔗 [ERDDAP dataset](https://netcdf-dev.obsea.es/erddap/tabledap/./10.html)  

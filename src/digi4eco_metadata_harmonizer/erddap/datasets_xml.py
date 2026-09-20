@@ -19,7 +19,7 @@ from ..metadata.metadata_templates import coordinate_default_name
 from ..metadata.waterframe import WaterFrame
 from ..metadata.xmlutils import get_element
 
-logger = logging.getLogger("emso_metadata_harmonizer")
+logger = logging.getLogger("digi4eco_metadata_harmonizer")
 
 
 def get_erddap_data_type(series: pd.Series):
@@ -294,7 +294,7 @@ def generate_erddap_dataset(wf: WaterFrame, directory, dataset_id, recursive: bo
         add_attribute = get_element(root, "addAttributes")
         new_element = etree.SubElement(add_attribute, "att", attrib={"name": key})
         if isinstance(value, list):
-            value = wf.emso.list_to_str(key, value)  # Convert to list following Metadata Specs
+            value = wf.digi4eco.list_to_str(key, value)  # Convert to list following Metadata Specs
 
         new_element.text = value
 

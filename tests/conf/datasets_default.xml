@@ -54,36 +54,35 @@ Also, 1000 ms won't annoy human users who make a bad request.
 &lt;table class="compact nowrap" style="width:100%; background-color:#393b3f;"&gt;
   &lt;tr&gt;
     &lt;td style="text-align:center; width:80px;"&gt;&lt;a rel="bookmark"
-      href="https://emso.eu/"&gt;&lt;img
-      title="EMSO ERIC"
-      src="&amp;erddapUrl;/images/logo.png" alt="EMSO" height="90" width="142"
+      href="https://digi4eco.eu/"&gt;&lt;img
+      title="DIGI4ECO"
+      src="&amp;erddapUrl;/images/logo.png" alt="DIGI4ECO" height="90" width="142"
       style="vertical-align:middle;"&gt;&lt;/a&gt;&lt;/td&gt;
     &lt;td style="text-align:left; font-size:x-large; color:#a7be58; "&gt;
-      &lt;strong&gt;EMSO ERIC Example Datasets&lt;/strong&gt;
+      &lt;strong&gt;DIGI4ECO Example Datasets&lt;/strong&gt;
       &lt;br&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;Easier access to scientific data&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
       &lt;/td&gt;
     &lt;td style="text-align:right; font-size:small;  color:#FFFFFF; "&gt;
       &amp;loginInfo; | &amp;language; &amp;nbsp; &amp;nbsp;
       &lt;br&gt;&amp;BroughtToYouBy;
-      &lt;a title="EMSO" rel="bookmark"  href="https://emso.eu/" style="color:#7C87DF;"&gt;EMSO&lt;/a&gt;
+      &lt;a title="DIGI4ECO" rel="bookmark"  href="https://digi4eco.eu/" style="color:#7C87DF;"&gt;DIGI4ECO&lt;/a&gt;
       &amp;nbsp; &amp;nbsp;
       &lt;/td&gt;
   &lt;/tr&gt;
 &lt;/table&gt;
 </startBodyHtml5>
   <theShortDescriptionHtml>
-    &lt;h1&gt;EMSO Dataset Examples&lt;/h1&gt;
+    &lt;h1&gt;DIGI4ECO Dataset Examples&lt;/h1&gt;
 
     &lt;div&gt;
-        &lt;p&gt;This page contains a set of dataset examples following the &lt;a href="https://github.com/emso-eric/emso-metadata-specifications/tree/develop"&gt;EMSO Metadata Specifications&lt;/a&gt;. These examples demonstrate proper metadata formatting and structure for EMSO data products, ensuring consistency and interoperability across the research infrastructure.&lt;/p&gt;
+        &lt;p&gt;This page contains a set of dataset examples following the &lt;a href="https://github.com/digi4eco/digi4eco-metadata-specifications"&gt;DIGI4ECO Metadata Specifications&lt;/a&gt;. These examples demonstrate proper metadata formatting and structure for DIGI4ECO data products, ensuring consistency and interoperability across the research infrastructure.&lt;/p&gt;
     &lt;/div&gt;
 
     &lt;div&gt;
         &lt;h2&gt;Useful Links&lt;/h2&gt;
         &lt;ul&gt;
-            &lt;li&gt;&lt;strong&gt;&lt;/strong&gt; &lt;a href="https://github.com/emso-eric/emso-metadata-specifications/tree/develop" target="_blank"&gt;EMSO Metadata Specifications&lt;/a&gt;: The normative document with the rules on how to create EMSO-compliant NetCDF and ERDDAP datasets&lt;/li&gt;
-            &lt;li&gt;&lt;a href="https://github.com/emso-eric/metadata-harmonizer/tree/develop" target="_blank"&gt;Metadata Harmonizer Toolbox&lt;/a&gt;: contains several tools o creates and evaluate NetCDF datasets in compliance with EMSO Metadata Specifications. It also includes tools to integrate NetCDF files into an ERDDAP server&lt;/li&gt;
-            &lt;li&gt;&lt;a href="https://github.com/emso-eric/example-datasets" target="_blank"&gt;Configuration of this ERDDAP server&lt;/a&gt;: Contains all the configuration and datasets shown in this page. &lt;/li&gt;
+            &lt;li&gt;&lt;strong&gt;&lt;/strong&gt; &lt;a href="https://github.com/digi4eco/digi4eco-metadata-specifications" target="_blank"&gt;DIGI4ECO Metadata Specifications&lt;/a&gt;: The normative document with the rules on how to create DIGI4ECO-compliant NetCDF and ERDDAP datasets&lt;/li&gt;
+            &lt;li&gt;&lt;a href="https://github.com/digi4eco/metadata-harmonizer/tree/main" target="_blank"&gt;Metadata Harmonizer Toolbox&lt;/a&gt;: contains several tools o creates and evaluate NetCDF datasets in compliance with DIGI4ECO Metadata Specifications. It also includes tools to integrate NetCDF files into an ERDDAP server&lt;/li&gt;
         &lt;/ul&gt;
     &lt;/div&gt;
 

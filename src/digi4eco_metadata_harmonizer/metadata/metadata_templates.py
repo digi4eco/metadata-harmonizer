@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This file contains JSON-based templates for EMSO metadata
+This file contains JSON-based templates for DIGI4ECO metadata
 
 author: Enoc Martínez
 institution: Universitat Politècnica de Catalunya (UPC)

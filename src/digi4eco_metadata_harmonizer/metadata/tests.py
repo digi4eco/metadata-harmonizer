@@ -20,14 +20,14 @@ from rich.style import Style
 from rich.progress import Progress
 import pandas as pd
 import re
-from . import EmsoMetadata, init_emso_metadata
+from . import Digi4ecoMetadata, init_digi4eco_metadata
 from .utils import group_metadata_variables, check_url, CYN, RST
 import inspect
 import numpy as np
 from dataclasses import dataclass
 from urllib.parse import urlparse
 
-logger = logging.getLogger("emso_metadata_harmonizer")
+logger = logging.getLogger("digi4eco_metadata_harmonizer")
 
 
 @dataclass
@@ -37,17 +37,17 @@ class Context:
     varname: str  # variable under test, used "global" for global attributes
 
 
-class EmsoMetadataTester:
+class Digi4ecoMetadataTester:
     def __init__(self):
         """
-        This class implements the tests to ensure that the metadata in a particular ERDDAP is harmonized with the EMSO
-        metadata standards. The tests are configured in the 'EMSO_Metadata_Specifications.md' document. There should be 2 different
+        This class implements the tests to ensure that the metadata in a particular ERDDAP is harmonized with the DIGI4ECO
+        metadata standards. The tests are configured in the 'DIGI4ECO_Metadata_Specifications.md' document. There should be 2 different
         tables with the tests defined, one for the global attributes and another one for tests to be carreid
         """
         # Dict to store all erddap. KEY is the test identifier while value is the method
-        logger.info("Setting up EMSO Metadata Tests...")
+        logger.info("Setting up DIGI4ECO Metadata Tests...")
 
-        self.metadata = init_emso_metadata(force_update=True)
+        self.metadata = init_digi4eco_metadata(force_update=True)
         self.context = None  # here info about the current attribute being tested will be stored
 
         self.implemented_tests = {}
@@ -429,7 +429,6 @@ class EmsoMetadataTester:
         r = {
             "dataset_id": dataset_id,
             "institution": global_meta.get("institution", "unknown"),
-            "emso_facility": global_meta.get("emso_regional_facility_name", "unknown"),
             "total": total,
             "required": required,
             "optional": optional
@@ -594,17 +593,6 @@ class EmsoMetadataTester:
         if value in self.metadata.oceansites_data_modes:
             return True, ""
         return False, f"Data mode not valid, valid values are {self.metadata.oceansites_data_modes}"
-
-    # -------- EMSO Data -------- #
-    def emso_facility(self, value, args):
-        if value in self.metadata.emso_regional_facilities:
-            return True, ""
-        return False, f"not a valid EMSO Regional Facility"
-
-    def emso_site_code(self, value, args):
-        if value in self.metadata.emso_sites:
-            return True, ""
-        return False, f"not a valid EMSO site"
 
     # -------- SPDX Licenses -------- #
     def spdx_license_name(self, value, args):
@@ -836,46 +824,6 @@ class EmsoMetadataTester:
 
         if not check_url(value):
             return False, "URL not reachable"
-
-        return True, ""
-
-    def oso_ontology_name(self, value, args):
-        oso_type = args[0]
-        assert oso_type in ["rf", "site", "platform"]
-
-        if oso_type == "rf" :
-            if not self.metadata.oso.check_rf(value, "label"):
-                return False, "RF not found in OSO"
-
-        elif oso_type == "site":
-            if not self.metadata.oso.check_site(value, "label"):
-                return False, "Site not found in OSO"
-
-        elif oso_type == "platform":
-            if not self.metadata.oso.check_platform(value, "label"):
-                return False, "Platform not found in OSO"
-        else:
-            raise ValueError(f"Unimplemented oso_type {oso_type}")
-
-        return True, ""
-
-    def oso_ontology_uri(self, value, args):
-        oso_type = args[0]
-        assert oso_type in ["rf", "site", "platform"]
-
-        if oso_type == "rf":
-            if not self.metadata.oso.check_rf(value, "uri"):
-                return False, "RF not found in OSO"
-
-        elif oso_type == "site":
-            if not self.metadata.oso.check_site(value, "uri"):
-                return False, "Site not found in OSO"
-
-        elif oso_type == "platform":
-            if not self.metadata.oso.check_platform(value, "uri"):
-                return False, "Platform not found in OSO"
-        else:
-            raise ValueError(f"Unimplemented oso_type {oso_type}")
 
         return True, ""
 

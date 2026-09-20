@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This python project connects to an ERDDAP service and ensures that all listed datasets are compliant with the EMSO
+This python project connects to an ERDDAP service and ensures that all listed datasets are compliant with the DIGI4ECO
 Harmonization Guidelines.
 
 author: Enoc Martínez
@@ -19,12 +19,12 @@ import os
 from .metadata.waterframe import operational_tests, check_keywords
 from . import WaterFrame
 from .erddap import ERDDAP
-from .metadata import  EmsoMetadata
+from .metadata import  Digi4ecoMetadata
 from .metadata.utils import threadify
 from .metadata.dataset import get_netcdf_metadata
-from .metadata.tests import EmsoMetadataTester
+from .metadata.tests import Digi4ecoMetadataTester
 
-logger = logging.getLogger("emso_metadata_harmonizer")
+logger = logging.getLogger("digi4eco_metadata_harmonizer")
 
 
 def metadata_report(target,
@@ -43,7 +43,7 @@ def metadata_report(target,
 
     :param target: ERDDAP service URL, NetCDF file or JSON metadata file
     :param output: If passed a summary of ALL datasets will be stored)
-    :param specifications: use a different EMSO_Metadata_Specifications.md file (only for development)
+    :param specifications: use a different DIGI4ECO_Metadata_Specifications.md file (only for development)
     :param variables: process only a subset of variables
     :param ignore_ok: ignores correct lines, just print errors and warnings
     :param: csv:  store the results in a CSV file (only useful when analyzing single datasets)
@@ -53,14 +53,14 @@ def metadata_report(target,
     """
 
     if clear_downloads:
-        EmsoMetadata.clear_downloads()
+        Digi4ecoMetadata.clear_downloads()
 
     if not target:
         logger.error("ERDDAP URL, NetCDF file or JSON file required!")
         exit()
 
     if specifications:
-        EmsoMetadata.use_custom_file(specifications)
+        Digi4ecoMetadata.use_custom_file(specifications)
 
     datasets = [
         # {"file": filename, "url": "http://my.server.com/erddap", "dataset_id": "MyDataset"}
@@ -97,13 +97,12 @@ def metadata_report(target,
     else:
         raise ValueError(f"Expected .nc file or ERDDAP url, got target='{target}' ")
 
-    tests = EmsoMetadataTester()
+    tests = Digi4ecoMetadataTester()
 
     total = []
     required = []
     optional = []
     institution = []
-    emso_facility = []
     dataset_id = []
 
     if csv_folder:
@@ -120,7 +119,6 @@ def metadata_report(target,
         required.append(r["required"])
         optional.append(r["optional"])
         institution.append(r["institution"])
-        emso_facility.append(r["emso_facility"])
         dataset_id.append(r["dataset_id"])
 
         if d["file"]:
@@ -149,7 +147,6 @@ def metadata_report(target,
     tests = pd.DataFrame(
         {
             "dataset_id": dataset_id,
-            "emso_facility": emso_facility,
             "institution": institution,
             "total": total,
             "required": required,

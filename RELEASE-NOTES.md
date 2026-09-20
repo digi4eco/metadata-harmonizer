@@ -1,3 +1,13 @@
+## Version 1.0.8 ##
+1. Synced with the EMSO ERIC metadata-harmonizer development branch
+2. Removed the EMSO-specific attributes `emso_site_name`, `emso_site_uri`, `emso_regional_facility_name`,
+   `emso_regional_facility_uri`, `emso_platform_name` and `emso_platform_uri` from validation, generation and examples
+3. Removed the `oso_ontology_name` / `oso_ontology_uri` compliance tests and the dead `emso_facility` /
+   `emso_site_code` tests; dropped the `emso_facility` column from the metadata report
+4. Specifications and vocabularies are now downloaded from the DIGI4ECO specifications repository
+5. Renamed the local cache folder from `.emso` to `.digi4eco` and the package to `digi4eco_metadata_harmonizer`
+6. Removed the PyPI packaging configuration, this fork is used from source
+
 ## Version 1.0.7 ##
 1. Adding alternative download URI for EuroSciVoc, GCMD and GEMET vocabularies (EuroSciVoc automatic downloads have been forbidden as of 2026-06-25)
 
@@ -23,8 +33,8 @@
 
  
 ## version 1.0.2 ##
-1. Force URLs pointint to EMSO specs dev branch, this avoid vocab updates without new EMSO Specs release
-2. Implementing proper way to handle logs using emso_metadata_harmonizer logger
+1. Force URLs pointint to the specs dev branch, this avoid vocab updates without new Specs release
+2. Implementing proper way to handle logs using digi4eco_metadata_harmonizer logger
 3. Adding the CSV option to the metadata report, to store individual reports as CSV files
 
 ## version 1.0.1 ##
@@ -60,7 +70,7 @@
 ## version 0.4.3 ##
 1. Improved API to generate datasets, now can be called with dicts and DataFrames (before only with files)
 2. Removing mooda dependencies (this time for sure)
-3. Adding option to reuse EmsoMetadata, speeding up creation of multiple datasets
+3. Adding option to reuse Digi4ecoMetadata, speeding up creation of multiple datasets
 4. Removing most prints to clear stout
 
 ## version 0.4.2 ##

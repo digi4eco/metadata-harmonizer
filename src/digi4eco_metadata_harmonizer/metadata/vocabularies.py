@@ -272,8 +272,8 @@ class EuroSciVoc(GenericVocabulary):
 
         download_uri  = "https://op.europa.eu/o/opportal-service/euvoc-download-handler?cellarURI=http%3A%2F%2Fpublications.europa.eu%2Fresource%2Fdistribution%2Feuroscivoc%2F20250924-0%2Frdf%2Fskos_xl%2FEuroSciVoc.rdf&fileName=EuroSciVoc.rdf"
         alternative_download_uri = "https://files.obsea.es/other/vocabs/EuroSciVoc.rdf"
-        rdf_file = os.path.join(".emso", "keywords", "euroscivoc", "euroscivoc.rdf")
-        csv_file = os.path.join(".emso", "keywords", "euroscivoc", "euroscivoc.csv")
+        rdf_file = os.path.join(".digi4eco", "keywords", "euroscivoc", "euroscivoc.rdf")
+        csv_file = os.path.join(".digi4eco", "keywords", "euroscivoc", "euroscivoc.csv")
 
         query = """
             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -302,8 +302,8 @@ class GEMET(GenericVocabulary):
         download_uri  = "https://www.eionet.europa.eu/gemet/latest/gemet.rdf.gz"
         alternative_download_uri = "https://files.obsea.es/other/vocabs/gemet.rdf.gz"
 
-        rdf_file = os.path.join(".emso", "keywords", "gemet", "gemet.rdf")
-        csv_file = os.path.join(".emso", "keywords", "gemet", "gemet.csv")
+        rdf_file = os.path.join(".digi4eco", "keywords", "gemet", "gemet.rdf")
+        csv_file = os.path.join(".digi4eco", "keywords", "gemet", "gemet.csv")
 
         query = """
             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -360,11 +360,11 @@ class GCMD(GenericVocabulary):
             "https://files.obsea.es/other/vocabs/gcmd_part1.rdf"
         ]
 
-        rdf_file = os.path.join(".emso", "keywords", "gcmd", "gcmd.rdf")
-        csv_file = os.path.join(".emso", "keywords", "gcmd", "gcmd.csv")
-        broader = os.path.join(".emso", "keywords", "gcmd", "gcmd.broader.json")
-        narrower = os.path.join(".emso", "keywords", "gcmd", "gcmd.narrower.json")
-        related = os.path.join(".emso", "keywords", "gcmd", "gcmd.related.json")
+        rdf_file = os.path.join(".digi4eco", "keywords", "gcmd", "gcmd.rdf")
+        csv_file = os.path.join(".digi4eco", "keywords", "gcmd", "gcmd.csv")
+        broader = os.path.join(".digi4eco", "keywords", "gcmd", "gcmd.broader.json")
+        narrower = os.path.join(".digi4eco", "keywords", "gcmd", "gcmd.narrower.json")
+        related = os.path.join(".digi4eco", "keywords", "gcmd", "gcmd.related.json")
 
 
         query = """
@@ -476,8 +476,8 @@ class SeaDataNetVocabulary(GenericVocabulary):
         download_uri = f"https://vocab.nerc.ac.uk/collection/{code}/current/?_profile=nvs&_mediatype=application/rdf+xml"
         super().__init__(code, name, uri)
 
-        csv_file = os.path.join(".emso", "sdn", f"{code}.csv")
-        rdf_file = os.path.join(".emso", "sdn", f"{code}.rdf")
+        csv_file = os.path.join(".digi4eco", "sdn", f"{code}.csv")
+        rdf_file = os.path.join(".digi4eco", "sdn", f"{code}.rdf")
 
         query = """
             PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
@@ -497,9 +497,9 @@ class SeaDataNetVocabulary(GenericVocabulary):
             """
         self.load_vocab(download_uri, csv_file, rdf_file, query)
 
-        b = os.path.join(".emso", "sdn", f"{code}.broader.json")
-        n = os.path.join(".emso", "sdn", f"{code}.narrower.json")
-        r = os.path.join(".emso", "sdn", f"{code}.related.json")
+        b = os.path.join(".digi4eco", "sdn", f"{code}.broader.json")
+        n = os.path.join(".digi4eco", "sdn", f"{code}.narrower.json")
+        r = os.path.join(".digi4eco", "sdn", f"{code}.related.json")
         self.load_relations(b, n , r)
 
     def validate_uri(self, uri: str) -> bool:
@@ -542,8 +542,8 @@ class OSO(GenericVocabulary):
             }
             ORDER BY ?prefLabel
         """
-        csv_file = os.path.join(".emso", "oso", "oso.csv")
-        rdf_file = os.path.join(".emso", "oso", "oso.ttl")
+        csv_file = os.path.join(".digi4eco", "oso", "oso.csv")
+        rdf_file = os.path.join(".digi4eco", "oso", "oso.ttl")
         self.load_vocab(download_uri, csv_file, rdf_file, query)
 
 

@@ -2,7 +2,6 @@ platforms:
   ODASItalia1:
     long_name: "ODASItalia1"  # human-readable long name of the platform
     wmo_platform_code: "6103675"  # (optional) World Meteorological Organization platform number
-    emso_platform_name: "ODAS Italia 1"  # link to the OSO ontology
     platform_type_name: "mooring"  # Platform type from the L06 vocabulary
     platform_type_uri: "http://vocab.nerc.ac.uk/collection/L06/current/48/"  # Link to an instance of the L06 vocabulary
     platform_reference: "http://www.w1m3a.cnr.it"

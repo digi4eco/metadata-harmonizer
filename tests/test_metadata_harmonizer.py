@@ -27,8 +27,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.abspath(os.path.join(current_dir, os.pardir))
 # Add the parent directory to the sys.path
 sys.path.insert(0, parent_dir)
-from src.emso_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame
-from src.emso_metadata_harmonizer.metadata.utils import setup_log, get_file_list, get_dir_list, CYN, WHT
+from src.digi4eco_metadata_harmonizer import generate_dataset, erddap_config, WaterFrame
+from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log, get_file_list, get_dir_list, CYN, WHT
 
 
 def run_subprocess(cmd):
@@ -85,7 +85,7 @@ class MetadataHarmonizerTester(unittest.TestCase):
                 "NcML": "",    # By default, do not use NcML configuration files
                 "mapping": "", # By default, do not use mapping.yaml files
                 "nc_files": nc_files, # if csv files are provided, we will attempt to configure it from source NetCDF
-                "cf_check": False,  # Do not test CF compliance with non-EMSO NetCDF files
+                "cf_check": False,  # Do not test CF compliance with non-DIGI4ECO NetCDF files
                 "ignore_extra_cols": False
             }
 

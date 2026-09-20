@@ -11,8 +11,8 @@ created: 13/4/23
 """
 
 from argparse import ArgumentParser
-from src.emso_metadata_harmonizer import generate_dataset
-from src.emso_metadata_harmonizer.metadata.utils import setup_log
+from src.digi4eco_metadata_harmonizer import generate_dataset
+from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log
 
 
 if __name__ == "__main__":
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     argparser.add_argument("-l", "--log-level", type=str, help="Setting log level (debug, info, warn, error or critical)", required=False, default="")
     argparser.add_argument("-i", "--ignore-extra-cols", action="store_true", help="Ignore data columns not listed in metadata", required=False)
     argparser.add_argument("--specs", type=str,
-                           help="Use this file as EMSO Metadata specifications source (use only for development)",
+                           help="Use this file as DIGI4ECO Metadata specifications source (use only for development)",
                            default="")
 
     args = argparser.parse_args()

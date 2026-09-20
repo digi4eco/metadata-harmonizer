@@ -9,7 +9,7 @@ if __name__ == "__main__":
 
     argparser = ArgumentParser(description="Lists class instances in OSO ontology")
     argparser.add_argument("cls", type=str, help="Oso class to show (RFs, sites, platforms, etc.)")
-    argparser.add_argument("-f", "--file", type=str, help="Path to the OSO ttl file (by default .emso/oso.ttl", default=".emso/oso.ttl")
+    argparser.add_argument("-f", "--file", type=str, help="Path to the OSO ttl file (by default .digi4eco/oso.ttl", default=".digi4eco/oso.ttl")
     args = argparser.parse_args()
 
     valid_classes = ["RFs", "sites", "platforms"]
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     # Load your RDF data
     g = Graph()
-    g.parse(".emso/oso.ttl", format="turtle")  # or other formats: xml, n3, nt, json-ld
+    g.parse(".digi4eco/oso.ttl", format="turtle")  # or other formats: xml, n3, nt, json-ld
 
 #           #---- BBOX RFs ----#
     #           ?regionalFacility :hasBoundingBox ?bbox .

@@ -21,7 +21,7 @@ import xarray as xr
 import rich
 import warnings
 from .metadata_templates import time_valid_names, depth_valid_names, latitude_valid_names, longitude_valid_names, sensor_id_valid_names, platform_id_valid_names, is_coordinate
-from . import init_emso_metadata
+from . import init_digi4eco_metadata
 from .constants import iso_time_format
 from .metadata_templates import dimension_metadata, quality_control_metadata
 from .utils import LoggerSuperclass, CYN
@@ -35,9 +35,9 @@ except ImportError:
     UTC = datetime.timezone.utc        # Python ≤ 3.10
 
 
-emso = None  # Global variable used to avoid duplicated EMSO metadata objects in different waterframes
+digi4eco = None  # Global variable used to avoid duplicated DIGI4ECO metadata objects in different waterframes
 
-logger = logging.getLogger("emso_metadata_harmonizer")
+logger = logging.getLogger("digi4eco_metadata_harmonizer")
 
 
 # Make sure that we have all the coordinates
@@ -90,10 +90,10 @@ class WaterFrame(LoggerSuperclass):
             get_coordinates_from_dataframe(df)
 
         LoggerSuperclass.__init__(self, logger, "WF", colour=CYN)
-        global emso
-        if not emso:
-            emso = init_emso_metadata()
-        self.emso = emso
+        global digi4eco
+        if not digi4eco:
+            digi4eco = init_digi4eco_metadata()
+        self.digi4eco = digi4eco
 
         # Metadata should have at least 4 keys: global, sensor, platform and variables
         for var in ["global", "sensors", "platforms", "variables"]:
@@ -326,7 +326,7 @@ class WaterFrame(LoggerSuperclass):
             if "units" not in var.keys() and var["variable_type"] == "environmental":
                 # Get the alternative label from P06
                 self.debug(f"Automatically filling units for variable {varname}")
-                units = self.emso.vocab_get("P06", var["sdn_uom_uri"], "altLabel")
+                units = self.digi4eco.vocab_get("P06", var["sdn_uom_uri"], "altLabel")
                 self.vocabulary[varname]["units"] = units
 
 
@@ -344,21 +344,6 @@ class WaterFrame(LoggerSuperclass):
         if "institution_edmo_uri" in meta.keys() and "institution_edmo_code" not in meta.keys():
             self.debug("Derivating institution_edmo_code")
             meta["institution_edmo_code"] = meta["institution_edmo_uri"].split("/")[-1]
-
-        uri_from_name = self.emso.oso.get_uri_from_name
-        name_from_uri = self.emso.oso.get_name_from_uri
-        # EMSO Regional Facilities
-        if "emso_regional_facility_uri" in meta.keys() and "emso_regional_facility_name" not in meta.keys():
-            meta["emso_regional_facility_name"] = name_from_uri(meta["emso_regional_facility_uri"], "rfs")
-
-        if "emso_regional_facility_name" in meta.keys() and "emso_regional_facility_uri" not in meta.keys():
-            meta["emso_regional_facility_uri"] = uri_from_name(meta["emso_regional_facility_name"], "rfs")
-
-        if "emso_site_uri" in meta.keys() and "emso_site_name" not in meta.keys():
-            meta["emso_site_name"] = name_from_uri(meta["emso_site_uri"], "sites")
-
-        if "emso_site_name" in meta.keys() and "emso_site_uri" not in meta.keys():
-            meta["emso_site_uri"] = uri_from_name(meta["emso_site_name"], "sites")
 
         # SPDX license
         if "license_uri" not in meta.keys() and "license" in meta.keys():
@@ -392,19 +377,9 @@ class WaterFrame(LoggerSuperclass):
             if variable["variable_type"] == "platform":
                 self.autofill_vocab(variable, "platform_type", "L06")
 
-                meta = self.vocabulary[varname]
-
-                if "emso_platform_name" in meta.keys() and "emso_platform_uri" not in meta.keys():
-                    meta["emso_platform_uri"] = uri_from_name(meta["emso_platform_name"], "platforms")
-
-                if "emso_platform_name" in meta.keys() and "emso_platform_uri" not in meta.keys():
-                    meta["emso_platform_uri"] = name_from_uri(meta["emso_platform_name"], "platforms")
-
-                self.vocabulary[varname] = meta
-
 
         # Fill coordinate metadata from default table
-        df = self.emso.valid_coordinates
+        df = self.digi4eco.valid_coordinates
         variables = df["coordinate name"].to_list()
         for varname in variables:
             if varname not in self.vocabulary.keys():
@@ -467,12 +442,12 @@ class WaterFrame(LoggerSuperclass):
 
         if uri_key in meta.keys():
             try:
-                uri, urn, preflabel, _ = self.emso.get_vocab_by_uri(vocab_id, meta[uri_key])
+                uri, urn, preflabel, _ = self.digi4eco.get_vocab_by_uri(vocab_id, meta[uri_key])
             except LookupError:
                 return
         elif urn_key in meta.keys():
             try:
-                uri, urn, preflabel, _ = self.emso.get_vocab_by_urn(vocab_id, meta[urn_key])
+                uri, urn, preflabel, _ = self.digi4eco.get_vocab_by_urn(vocab_id, meta[urn_key])
             except LookupError:
                 return
         elif exception:
@@ -701,7 +676,7 @@ class WaterFrame(LoggerSuperclass):
         for key, value in self.metadata.items():
             if type(value) == list:
                 value = [str(v) for v in value]
-                value = self.emso.list_to_str(key, value)
+                value = self.digi4eco.list_to_str(key, value)
 
             ncfile.setncattr(key, value)
 
@@ -1020,8 +995,8 @@ class WaterFrame(LoggerSuperclass):
         def get_from_sdn_vocab(target, by, iden, vocab):
             try:
                 if by == "uri":
-                    iden = self.emso.harmonize_sdn_uri(iden)
-                df = self.emso.sdn_vocabs[vocab]
+                    iden = self.digi4eco.harmonize_sdn_uri(iden)
+                df = self.digi4eco.sdn_vocabs[vocab]
                 return df[df[by] == iden][target].values[0]
             except (KeyError, IndexError):
                 return ""
@@ -1036,9 +1011,9 @@ class WaterFrame(LoggerSuperclass):
             if not p02:
                 # If not using P02 as a name try to derive P02 from P01
                 if "sdn_parameter_uri" in meta.keys():
-                    uri = self.emso.harmonize_sdn_uri(meta["sdn_parameter_uri"])
+                    uri = self.digi4eco.harmonize_sdn_uri(meta["sdn_parameter_uri"])
                     try:
-                        broad = self.emso.sdn_vocabs_broader["P01"][uri]
+                        broad = self.digi4eco.sdn_vocabs_broader["P01"][uri]
                     except KeyError:
                         self.error(f"Can't access P01 term from uri '{uri}'")
                         continue
@@ -1076,19 +1051,6 @@ class WaterFrame(LoggerSuperclass):
                 k = get_from_sdn_vocab("prefLabel", "uri", uri, "L06")
                 keywords.append(k)
 
-                # Get OSO terms
-            if "emso_platform_uri" in meta.keys():
-                site, rf = self.emso.oso.platform_metadata(meta["emso_platform_uri"])
-                keywords.append(site)
-                keywords.append(rf)
-
-            if "emso_platform_name" in meta.keys():
-                uri = self.emso.oso.get_uri_from_name(meta["emso_platform_name"], "platforms")
-                site, rf = self.emso.oso.platform_metadata(uri)
-                keywords.append(site)
-                keywords.append(rf)
-                keywords.append(meta["emso_platform_name"])
-
 
         keywords = [k for k in keywords if k and k not in self.get_coordinate_names()]
 
@@ -1103,7 +1065,7 @@ class WaterFrame(LoggerSuperclass):
             "Sampling parameters"
         ]
         # Convert strings to Keyword class
-        keyword_list = [self.emso.keywords.keyword_from_label(k) for k in keywords]
+        keyword_list = [self.digi4eco.keywords.keyword_from_label(k) for k in keywords]
         keyword_list = [k for k in keyword_list if k and k.name not in ignore]  # avoid Nones and unwanted keys
         return keyword_list
 
@@ -1115,7 +1077,7 @@ class WaterFrame(LoggerSuperclass):
 
         current_terms = self.metadata["keywords"]
         current_terms = list(set(current_terms))  # avoid duplicates
-        ks = [self.emso.keywords.keyword_from_label(name) for name in current_terms]  # convert terms to Keywords objects
+        ks = [self.digi4eco.keywords.keyword_from_label(name) for name in current_terms]  # convert terms to Keywords objects
         all_keywords = []
         for k in ks:
             if k:
@@ -1132,7 +1094,7 @@ class WaterFrame(LoggerSuperclass):
         else:
             self.info("Keeping original keywords")
 
-        vocab_names, vocab_uris = self.emso.keywords.used_vocabularies(all_keywords)
+        vocab_names, vocab_uris = self.digi4eco.keywords.used_vocabularies(all_keywords)
 
         # ERDDAP will re-order keywords alphabetically. To prevent ERDDAP from breaking the list order, order all
         # keywords beforehand
@@ -1419,7 +1381,7 @@ def __check_keywords(wf: WaterFrame, verbose=False, quiet=False):
     if not keywords_uri:
         rprint(f"\nChecking keywords based on supplied 'keywords'")
         # Guess keywords by their name
-        provided_keywords = [wf.emso.keywords.keyword_from_label(k) for k in keywords]
+        provided_keywords = [wf.digi4eco.keywords.keyword_from_label(k) for k in keywords]
         keywords_uri = [""] * len(keywords)  # Init keywords as empty strings
 
     if not keywords_type:
@@ -1427,7 +1389,7 @@ def __check_keywords(wf: WaterFrame, verbose=False, quiet=False):
 
     # construct keywords from URIs
     else:
-        provided_keywords = [wf.emso.keywords.keyword_from_uri(uri) for uri in keywords_uri]
+        provided_keywords = [wf.digi4eco.keywords.keyword_from_uri(uri) for uri in keywords_uri]
 
     if verbose:
         rprint("keywords list:")
@@ -1449,7 +1411,7 @@ def __check_keywords(wf: WaterFrame, verbose=False, quiet=False):
             rprint(f"    ⛔️ keyword '[red]{k.name}[/red]' not valid")
             success = False
 
-    found_vocabs, found_vocabs_uri = wf.emso.keywords.used_vocabularies(provided_keywords)
+    found_vocabs, found_vocabs_uri = wf.digi4eco.keywords.used_vocabularies(provided_keywords)
     rprint(f"\n📖 Checking [cyan]keywords_vocabulary[/cyan]:")
     for found in found_vocabs:
         if found not in keywords_vocab:
@@ -1493,7 +1455,7 @@ def __check_keywords(wf: WaterFrame, verbose=False, quiet=False):
 
     all_keywords = provided_keywords + suggested_keywords
 
-    v_names, v_uris = wf.emso.keywords.used_vocabularies(all_keywords)
+    v_names, v_uris = wf.digi4eco.keywords.used_vocabularies(all_keywords)
 
     if verbose:
         rprint("\n  keywords_uri:")

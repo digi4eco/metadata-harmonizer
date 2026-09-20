@@ -1,17 +1,15 @@
 global:
   title: "Example 11: Fish detections from underwater pictures, compatible with Darwin Core"
   summary: "Fish detections from an underwater pictures analyzed through an object detection and classification algorithm trained to classify fish"
-  Conventions: "OceanSITES EMSO CF-1.8"
+  Conventions: "OceanSITES DIGI4ECO CF-1.8"
   institution: "UPC - Universitat Politècnica de Catalunya"
   institution_edmo_code: "2150"
   institution_ror_uri: "https://ror.org/03mb6wj31"
   update_interval: "void"
-  emso_site_name: "OBSEA"
-  emso_regional_facility_name: "Balearic Sea"
   source: "mooring"
   data_type: "OceanSITES profile data"
   format_version: "1.4"
-  network: "EMSO"
+  network: "DIGI4ECO"
   data_mode: "D"
   project: "DIGI4ECO GEORGE iMagine"
   project_code: "101112883 101094716 101058625"
@@ -41,7 +39,6 @@ platforms:
   OBSEA_seabed_station:
     long_name: "OBSEA Seafloor Observatory"  # human-readable long name of the platform
     wmo_platform_code: "6103565"  # (optional) World Meteorological Organization platform number
-    emso_platform_name: "OBSEA seabed station"  # link to the OSO ontology
     platform_type_name: "mooring"  # Platform type from the L06 vocabulary
     platform_type_uri: "http://vocab.nerc.ac.uk/collection/L06/current/48/"  # Link to an instance of the L06 vocabulary
     platform_reference: "https://obsea.es"  # (optional) uri where more information can be obtained

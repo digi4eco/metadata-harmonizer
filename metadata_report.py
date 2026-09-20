@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-This python project connects to an ERDDAP service and ensures that all listed datasets are compliant with the EMSO
+This python project connects to an ERDDAP service and ensures that all listed datasets are compliant with the DIGI4ECO
 Harmonization Guidelines.
 
 author: Enoc Martínez
@@ -10,8 +10,8 @@ license: MIT
 created: 23/2/23
 """
 from argparse import ArgumentParser
-from src.emso_metadata_harmonizer import metadata_report
-from src.emso_metadata_harmonizer.metadata.utils import setup_log
+from src.digi4eco_metadata_harmonizer import metadata_report
+from src.digi4eco_metadata_harmonizer.metadata.utils import setup_log
 
 if __name__ == "__main__":
     argparser = ArgumentParser()
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     argparser.add_argument("-c", "--csv",  type=str, help="Folder to store CSV files with the report of each dataset", default="")
     argparser.add_argument("-i", "--ignore-ok", action="store_true", help="do not show tests with positive outcome")
     argparser.add_argument("-V", "--variables", nargs="+", help="Run test only for a variable subset", default=[])
-    argparser.add_argument("--specs", type=str, help="Use this file as EMSO Metadata specifications source (use only for development)", default="")
+    argparser.add_argument("--specs", type=str, help="Use this file as DIGI4ECO Metadata specifications source (use only for development)", default="")
     argparser.add_argument("-l", "--log-level", type=str, help="Setting log level (debug, info, warn, error or critical)", required=False, default="")
     argparser.add_argument("-k", "--keywords", action="store_true", help="Check the keywords")
     argparser.add_argument("-s", "--summary", action="store_true", help="Prints a summary of all datasets")

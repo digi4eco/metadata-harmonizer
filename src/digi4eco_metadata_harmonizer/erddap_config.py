@@ -16,12 +16,12 @@ import rich
 from .erddap.datasets_xml import generate_erddap_dataset, add_dataset
 from .metadata.waterframe import WaterFrame
 
-logger = logging.getLogger("emso_metadata_harmonizer")
+logger = logging.getLogger("digi4eco_metadata_harmonizer")
 
 def erddap_config(file: str, dataset_id: str, source_path: str, output: str = "", datasets_xml_file: str = "",
                   mapping: dict={}, filename_regex=".*", recursive=False):
     """
-    Configures an ERDDAP dataset based on an input NetCDF file compliant with the EMSO Metadata Specifications. The
+    Configures an ERDDAP dataset based on an input NetCDF file compliant with the DIGI4ECO Metadata Specifications. The
     configuration is the excerpt of the 'datasets.xml' file (check ERDDAP docs for more info). By default, the XML
     excerpt will be printed in the terminal, but it can be stored in a file (output param) or it can be directly
     added to the datasets.xml file (datasets_xml_file param).

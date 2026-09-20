@@ -1,15 +1,11 @@
 mapping:
   attributes:
-    title: "Example 14: Setup a EMSO-compliant dataset from Copernicus-like files"
+    title: "Example 14: Setup a DIGI4ECO-compliant dataset from Copernicus-like files"
     institution: "CNR - Consiglio Nazionale delle Ricerche"
-    summary: "Setup a EMSO-compliant dataset from Copernicus-like files. Source files from W1M3A have been slightly modified to convert the sensor_id to a string (instead of a numerical variable) and some variables have been removed"
+    summary: "Setup a DIGI4ECO-compliant dataset from Copernicus-like files. Source files from W1M3A have been slightly modified to convert the sensor_id to a string (instead of a numerical variable) and some variables have been removed"
     treatDimensionsAs: "LATITUDE,LONGITUDE,TIME"  # required for NetCDF files not compliant with CF, depends on your dimensions
     contributors: "Bart Simpson, Peter Griffin, Rick Sánchez"
     contributor_types: "DataCollector DataManager Researcher"
-    emso_regional_facility_name: "Western Mediterranean Sea"
-    emso_regional_facility_uri: "https://w3id.org/earthsemantics/OSO#Western_Mediterranean_Sea"
-    emso_site_name: "W1M3A"
-    emso_site_uri: "https://w3id.org/earthsemantics/OSO#W1M3A"
     doi: "10.5281/zenodo.13141951 10.5281/zenodo.8421765"
     project: "MINKE AMRIT"
     project_code: "101008724 101132013"
@@ -299,8 +295,6 @@ mapping:
         variable_type: "platform"
         long_name: "ODASItalia1"
         wmo_platform_code: "6103675"
-        emso_platform_name: "ODAS Italia 1"
-        emso_platform_uri: "https://w3id.org/earthsemantics/OSO#ODASItalia1"
         platform_type_name: "mooring"
         platform_type_uri: "http://vocab.nerc.ac.uk/collection/L06/current/48/"
         platform_type_urn: "SDN:L06::48"
